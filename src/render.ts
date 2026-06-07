@@ -1,0 +1,397 @@
+import { RB, INK, type ColorName, type BrickKind } from './levels.ts';
+
+// ── Shared render types ──────────────────────────────────────────────
+
+export interface Brick {
+  x: number; y: number; w: number; h: number;
+  color: ColorName; kind: BrickKind;
+  hits: number; maxHits: number;
+  drop: boolean;
+}
+
+export interface Ball {
+  x: number; y: number; r: number;
+  vx: number; vy: number;
+  stuck: boolean;
+  relX?: number;
+}
+
+export interface Paddle {
+  x: number; y: number; w: number; h: number;
+  baseW: number;
+}
+
+export interface PowerUp {
+  type: string; label: string;
+  color: ColorName; weight: number;
+  x: number; y: number;
+  vy: number; ph: number;
+}
+
+export interface Particle {
+  x: number; y: number;
+  vx: number; vy: number;
+  size: number; color: string;
+  shape: 'star' | 'dot';
+  rot: number; vr: number;
+  life: number; maxLife: number;
+  grav: number;
+}
+
+export interface Floater {
+  x: number; y: number;
+  text: string; color: string;
+  life: number; vy: number;
+}
+
+export interface Cloud {
+  x: number; y: number; s: number; vx: number;
+}
+
+export interface Twinkle {
+  x: number; y: number; r: number; sp: number; ph: number;
+}
+
+export interface Effects {
+  wide: number; slow: number; sticky: number;
+}
+
+// ── Path helpers ─────────────────────────────────────────────────────
+
+export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+export function starPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, points: number, rot: number): void {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const a = (Math.PI / points) * i - Math.PI / 2 + rot;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+export function heartPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
+  ctx.beginPath();
+  const top = cy - s * 0.28;
+  ctx.moveTo(cx, cy + s * 0.42);
+  ctx.bezierCurveTo(cx - s * 0.62, cy - s * 0.06, cx - s * 0.5, top - s * 0.36, cx, top);
+  ctx.bezierCurveTo(cx + s * 0.5, top - s * 0.36, cx + s * 0.62, cy - s * 0.06, cx, cy + s * 0.42);
+  ctx.closePath();
+}
+
+// ── Internal helpers ─────────────────────────────────────────────────
+
+function drawFace(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number, cheekColor?: string): void {
+  const e = 2.2 * scale;
+  ctx.fillStyle = INK;
+  ctx.beginPath(); ctx.arc(cx - 6 * scale, cy, e, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 6 * scale, cy, e, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(cx - 6 * scale + 0.8 * scale, cy - 0.8 * scale, 0.8 * scale, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 6 * scale + 0.8 * scale, cy - 0.8 * scale, 0.8 * scale, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.8 * scale;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(cx, cy + 1.5 * scale, 4 * scale, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.stroke();
+  if (cheekColor) {
+    ctx.fillStyle = cheekColor;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.arc(cx - 9 * scale, cy + 3 * scale, 2.2 * scale, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 9 * scale, cy + 3 * scale, 2.2 * scale, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  const puffs: [number, number, number][] = [[0, 0, 26], [28, 6, 22], [-28, 6, 22], [14, -10, 20], [-14, -10, 20]];
+  ctx.beginPath();
+  puffs.forEach(([px, py, pr]) => { ctx.moveTo(px + pr, py); ctx.arc(px, py, pr, 0, Math.PI * 2); });
+  ctx.fill();
+  ctx.fillRect(-44, 0, 88, 18);
+  ctx.restore();
+}
+
+// ── Exported draw functions ───────────────────────────────────────────
+
+export function drawBackground(ctx: CanvasRenderingContext2D, W: number, H: number, t: number, clouds: Cloud[], twinkles: Twinkle[]): void {
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0,    '#cfe9ff');
+  sky.addColorStop(0.45, '#e7dcff');
+  sky.addColorStop(1,    '#ffe3f1');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  const sun = ctx.createRadialGradient(W * 0.18, H * 0.12, 10, W * 0.18, H * 0.12, 360);
+  sun.addColorStop(0, 'rgba(255,249,210,0.85)');
+  sun.addColorStop(1, 'rgba(255,249,210,0)');
+  ctx.fillStyle = sun;
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W * 0.5, cy = H * 1.02;
+  const bands = ['#ff7fc4', '#a87cff', '#4db5ff', '#5fd97a', '#ffd93b', '#ff9f43', '#ff5d6c'];
+  const baseR = H * 0.92;
+  const bw = 26;
+  ctx.globalAlpha = 0.22;
+  ctx.lineWidth = bw;
+  bands.forEach((c, i) => {
+    ctx.strokeStyle = c;
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseR - i * bw, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+
+  clouds.forEach(cl => drawCloud(ctx, cl.x, cl.y, cl.s));
+
+  twinkles.forEach(tw => {
+    const tw2 = (Math.sin(t * tw.sp + tw.ph) + 1) / 2;
+    ctx.globalAlpha = 0.25 + tw2 * 0.6;
+    ctx.fillStyle = '#fffce0';
+    starPath(ctx, tw.x, tw.y, tw.r * (0.6 + tw2 * 0.5), tw.r * 0.35, 4, t * 0.2 + tw.ph);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+export function drawBrick(ctx: CanvasRenderingContext2D, b: Brick, t: number): void {
+  const { x, y, w, h } = b;
+  const col = RB[b.color];
+
+  if (b.kind === 'heart') {
+    const cx = x + w / 2, cy = y + h / 2;
+    const s = Math.min(w, h) * 1.15;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = INK;
+    heartPath(ctx, cx, cy, s); ctx.stroke();
+    ctx.fillStyle = col.fill; heartPath(ctx, cx, cy, s); ctx.fill();
+    ctx.fillStyle = col.light; ctx.globalAlpha = 0.6;
+    ctx.beginPath(); ctx.ellipse(cx - s * 0.16, cy - s * 0.12, s * 0.12, s * 0.08, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    drawFace(ctx, cx, cy + 1, Math.min(w, h) / 26, col.light);
+    return;
+  }
+
+  if (b.kind === 'sprite') {
+    const cx = x + w / 2, cy = y + h / 2;
+    const r = Math.min(w, h) * 0.46;
+    ctx.fillStyle = col.fill;
+    ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.lineJoin = 'round';
+    starPath(ctx, cx, cy, r * 1.32, r * 0.92, 8, t * 0.6);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff7fb';
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2); ctx.stroke();
+    drawFace(ctx, cx, cy, Math.min(w, h) / 24, col.fill);
+    return;
+  }
+
+  // normal / strong rounded brick
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = INK;
+  roundRect(ctx, x + 2.5, y + 2.5, w - 5, h - 5, 12); ctx.stroke();
+  ctx.fillStyle = col.fill;
+  roundRect(ctx, x + 2.5, y + 2.5, w - 5, h - 5, 12); ctx.fill();
+  ctx.fillStyle = col.light; ctx.globalAlpha = 0.85;
+  roundRect(ctx, x + 8, y + 7, w - 16, (h - 5) * 0.34, 8); ctx.fill();
+  ctx.globalAlpha = 1;
+  if (b.kind === 'strong' && b.hits >= 2) {
+    ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.7; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2 + i * 14 - 6, y + h * 0.62);
+      ctx.lineTo(x + w / 2 + i * 14 + 6, y + h * 0.4);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (b.hits === 1 && b.maxHits >= 2) {
+    ctx.strokeStyle = INK; ctx.globalAlpha = 0.35; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.3, y + 6); ctx.lineTo(x + w * 0.45, y + h * 0.5);
+    ctx.lineTo(x + w * 0.35, y + h - 6);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+export function drawPaddle(ctx: CanvasRenderingContext2D, p: Paddle, _t: number): void {
+  const { x, y, w, h } = p;
+  ctx.save();
+  ctx.fillStyle = 'rgba(52,33,90,0.18)';
+  roundRect(ctx, x + 4, y + 8, w, h, h / 2); ctx.fill();
+
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = INK; ctx.lineWidth = 5;
+  roundRect(ctx, x, y, w, h, h / 2); ctx.stroke();
+
+  ctx.save();
+  roundRect(ctx, x, y, w, h, h / 2); ctx.clip();
+  const bands = ['#ff5d6c', '#ff9f43', '#ffd93b', '#5fd97a', '#4db5ff', '#a87cff', '#ff7fc4'];
+  const bh = h / bands.length;
+  bands.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(x, y + i * bh, w, bh + 1); });
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.fillRect(x, y, w, h * 0.3);
+  ctx.restore();
+
+  ctx.strokeStyle = INK; ctx.lineWidth = 5;
+  roundRect(ctx, x, y, w, h, h / 2); ctx.stroke();
+
+  const cx = x + w / 2, cy = y + h / 2;
+  const sc = h / 18;
+  ctx.fillStyle = INK;
+  ctx.beginPath(); ctx.arc(cx - 7 * sc, cy - 1 * sc, 2.4 * sc, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 7 * sc, cy - 1 * sc, 2.4 * sc, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx - 6.2 * sc, cy - 1.8 * sc, 0.9 * sc, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 7.8 * sc, cy - 1.8 * sc, 0.9 * sc, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.4 * sc; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(cx, cy + 0.5 * sc, 5 * sc, 0.12 * Math.PI, 0.88 * Math.PI); ctx.stroke();
+  ctx.restore();
+}
+
+export function drawBall(ctx: CanvasRenderingContext2D, ball: Ball, t: number): void {
+  const { x, y, r } = ball;
+  ctx.save();
+  const glow = ctx.createRadialGradient(x, y, 1, x, y, r * 2.4);
+  glow.addColorStop(0, 'rgba(255,248,180,0.9)');
+  glow.addColorStop(1, 'rgba(255,248,180,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(x, y, r * 2.4, 0, Math.PI * 2); ctx.fill();
+
+  const rot = t * 1.5;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = INK; ctx.lineWidth = 4;
+  starPath(ctx, x, y, r * 1.5, r * 0.66, 5, rot); ctx.stroke();
+  ctx.fillStyle = '#ffd93b';
+  starPath(ctx, x, y, r * 1.5, r * 0.66, 5, rot); ctx.fill();
+  ctx.fillStyle = '#fff3a8';
+  starPath(ctx, x, y, r * 0.9, r * 0.4, 5, rot); ctx.fill();
+
+  ctx.fillStyle = INK;
+  ctx.beginPath(); ctx.arc(x - r * 0.32, y - r * 0.05, r * 0.16, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + r * 0.32, y - r * 0.05, r * 0.16, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, y + r * 0.1, r * 0.34, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  ctx.restore();
+}
+
+export const PU_ICON: Record<string, string> = {
+  multi: '◈', wide: '↔', slow: '🐌', life: '♥', sticky: '✦',
+};
+
+export function drawPowerup(ctx: CanvasRenderingContext2D, pu: PowerUp, t: number): void {
+  const { x, y } = pu;
+  const col = RB[pu.color];
+  const r = 22;
+  ctx.save();
+  ctx.translate(x, y);
+  const bob = Math.sin(t * 4 + pu.ph) * 2;
+  ctx.translate(0, bob);
+  ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = INK;
+  if (pu.type === 'life') {
+    heartPath(ctx, 0, 0, r * 2.0); ctx.stroke();
+    ctx.fillStyle = col.fill; heartPath(ctx, 0, 0, r * 2.0); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = col.fill; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = col.light; ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.3, r * 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.fillStyle = '#fff';
+  ctx.font = '700 20px Fredoka, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4; ctx.strokeStyle = INK;
+  ctx.strokeText(pu.label, 0, 2);
+  ctx.fillText(pu.label, 0, 2);
+  ctx.restore();
+}
+
+export function drawParticle(ctx: CanvasRenderingContext2D, p: Particle): void {
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.rot);
+  ctx.fillStyle = p.color;
+  if (p.shape === 'star') {
+    starPath(ctx, 0, 0, p.size, p.size * 0.45, 5, 0);
+  } else {
+    ctx.beginPath(); ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+  }
+  ctx.fill();
+  ctx.restore();
+}
+
+export function drawHUD(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  HUD: number,
+  score: number,
+  lives: number,
+  levelName: string,
+  effects: Effects,
+  combo: number,
+): void {
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  roundRect(ctx, 14, 12, W - 28, HUD - 22, 22); ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(168,124,255,0.5)';
+  roundRect(ctx, 14, 12, W - 28, HUD - 22, 22); ctx.stroke();
+
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = INK;
+  ctx.font = '700 30px Fredoka, sans-serif';
+  ctx.fillText('SCORE', 44, 44);
+  ctx.font = '600 42px Fredoka, sans-serif';
+  ctx.fillText(score.toLocaleString(), 44, 80);
+
+  const hx = W - 60;
+  ctx.textAlign = 'right';
+  ctx.font = '700 24px Fredoka, sans-serif';
+  ctx.fillStyle = INK;
+  ctx.fillText('LIVES', hx, 40);
+  for (let i = 0; i < lives; i++) {
+    const hcx = W - 50 - i * 42, hcy = 80;
+    ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+    heartPath(ctx, hcx, hcy, 34); ctx.stroke();
+    ctx.fillStyle = RB.pink.fill; heartPath(ctx, hcx, hcy, 34); ctx.fill();
+  }
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = RB.purple.shade;
+  ctx.font = '600 28px Fredoka, sans-serif';
+  ctx.fillText(levelName, W / 2, 38);
+
+  const tags: string[] = [];
+  if (effects.wide > 0) tags.push('WIDE');
+  if (effects.slow > 0) tags.push('SLOW');
+  if (effects.sticky > 0) tags.push('STICKY');
+  ctx.font = '600 22px Fredoka, sans-serif';
+  if (combo >= 2) {
+    ctx.fillStyle = RB.red.fill;
+    ctx.fillText('COMBO ×' + combo, W / 2, 74);
+  } else if (tags.length) {
+    ctx.fillStyle = RB.teal.shade;
+    ctx.fillText(tags.join('  ·  '), W / 2, 74);
+  }
+}

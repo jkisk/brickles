@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Brickles — a Rainbow Brite brick-breaker</title>
+
+<!-- favicon: a yellow star -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>" />
+
+<!-- open graph -->
+<meta property="og:title"       content="Brickles" />
+<meta property="og:description" content="A rainbow brick-breaker. Break all the bricks, catch the power-ups, restore the colour!" />
+<meta property="og:type"        content="website" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink: #34215a; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #6a4fa3;
+    background:
+      radial-gradient(120% 90% at 50% 0%, #8f7bd6 0%, #6a4fa3 55%, #4d3580 100%);
+    font-family: 'Fredoka', system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    touch-action: none;
+  }
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
+  #stage {
+    position: absolute; top: 50%; left: 50%;
+    width: 1080px; height: 1320px;
+    transform-origin: center center;
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(40,20,70,0.55), 0 0 0 8px rgba(255,255,255,0.18);
+  }
+  canvas#game { display: block; width: 1080px; height: 1320px; cursor: none; }
+
+  .ctl {
+    position: absolute; top: 26px; z-index: 5;
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 5px solid var(--ink);
+    background: #fff; color: var(--ink);
+    font-size: 30px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 5px 0 rgba(52,33,90,0.35);
+    transition: transform .08s;
+  }
+  .ctl:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(52,33,90,0.35); }
+  #btn-pause { right: 104px; }
+  #btn-mute  { right: 30px; }
+
+  .overlay {
+    position: absolute; inset: 0; z-index: 10;
+    display: none; align-items: center; justify-content: center;
+    padding: 60px;
+  }
+  .overlay.show { display: flex; }
+  .overlay::before {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(52,33,90,0.34); backdrop-filter: blur(3px);
+  }
+  .card {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 760px;
+    background: #fffdf7;
+    border: 8px solid var(--ink);
+    border-radius: 44px;
+    padding: 64px 56px 56px;
+    text-align: center;
+    box-shadow: 0 18px 0 rgba(52,33,90,0.30);
+  }
+  .card .kicker {
+    display: inline-block;
+    font-weight: 600; font-size: 26px; letter-spacing: 2px;
+    color: #fff; text-transform: uppercase;
+    background: #ff7fc4; border: 5px solid var(--ink);
+    border-radius: 999px; padding: 8px 28px; margin-bottom: 24px;
+    transform: rotate(-2deg);
+  }
+  .card h1 {
+    font-weight: 700; line-height: 0.95;
+    font-size: 116px; letter-spacing: -1px;
+    background: linear-gradient(90deg,#ff5d6c,#ff9f43,#ffd93b,#5fd97a,#4db5ff,#a87cff,#ff7fc4);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-stroke: 5px var(--ink);
+    paint-order: stroke fill;
+    margin-bottom: 8px;
+  }
+  .card h2 { font-weight: 700; font-size: 72px; color: var(--ink); margin-bottom: 14px; }
+  .card p.sub { font-weight: 500; font-size: 30px; color: #6a5a86; margin-bottom: 8px; }
+  .card p.big { font-weight: 600; font-size: 38px; color: var(--ink); margin: 6px 0; }
+  .card .score-pop { font-weight: 700; font-size: 84px; color: #ff5d6c; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; margin: 8px 0; }
+
+  .btn {
+    font-family: inherit; font-weight: 700; font-size: 38px;
+    color: #fff; cursor: pointer;
+    border: 6px solid var(--ink); border-radius: 999px;
+    padding: 20px 56px; margin-top: 30px;
+    background: linear-gradient(180deg,#5fd97a,#3fb65f);
+    box-shadow: 0 8px 0 rgba(52,33,90,0.35);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .btn:active { transform: translateY(5px); box-shadow: 0 3px 0 rgba(52,33,90,0.35); }
+  .btn.pink   { background: linear-gradient(180deg,#ff8fcb,#ff5fae); }
+  .btn.blue   { background: linear-gradient(180deg,#5fc4ff,#3a9fe6); }
+  .btn.yellow { background: linear-gradient(180deg,#ffe06b,#ffc83b); color: var(--ink); }
+
+  .legend {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 26px;
+    margin: 30px auto 4px; max-width: 600px; text-align: left;
+  }
+  .legend .row { display: flex; align-items: center; gap: 14px; font-weight: 500; font-size: 25px; color: #5a4a78; }
+  .legend .chip {
+    width: 42px; height: 42px; flex: 0 0 42px; border-radius: 12px; border: 4px solid var(--ink);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 22px; color: #fff;
+  }
+  .how { font-weight: 500; font-size: 27px; color: #6a5a86; margin-top: 4px; line-height: 1.5; }
+  .how b { color: var(--ink); font-weight: 700; }
+
+  .stars { font-size: 40px; letter-spacing: 8px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+  <div id="viewport">
+    <div id="stage">
+      <canvas id="game"></canvas>
+
+      <button id="btn-pause" class="ctl" title="Pause (P)">⏸</button>
+      <button id="btn-mute"  class="ctl" title="Mute (M)">🔊</button>
+
+      <!-- TITLE -->
+      <div id="overlay-title" class="overlay show">
+        <div class="card">
+          <span class="kicker">★ a rainbow brick-breaker ★</span>
+          <h1>Brickles</h1>
+          <p class="sub" id="title-hi">No high score yet — go make one!</p>
+          <p class="how">Move the <b>rainbow paddle</b> with your mouse. Bounce the<br />star to clear every brick. Catch falling treats!</p>
+          <div class="legend">
+            <div class="row"><span class="chip" style="background:#ff7fc4">♥</span> Heart &amp; sprite bricks drop treats</div>
+            <div class="row"><span class="chip" style="background:#4db5ff">+</span> Multi-ball — split the star</div>
+            <div class="row"><span class="chip" style="background:#5fd97a">W</span> Wide paddle</div>
+            <div class="row"><span class="chip" style="background:#3fd0d6">S</span> Slow-mo ball</div>
+            <div class="row"><span class="chip" style="background:#a87cff">✦</span> Sticky — catch &amp; aim</div>
+            <div class="row"><span class="chip" style="background:#ff5d6c">×</span> Chain bricks for combos</div>
+          </div>
+          <button id="btn-start" class="btn pink">Play ✦</button>
+        </div>
+      </div>
+
+      <!-- PAUSE -->
+      <div id="overlay-pause" class="overlay">
+        <div class="card">
+          <span class="kicker">paused</span>
+          <h2>Take a breath ☁</h2>
+          <p class="how"><b>P</b> resume · <b>M</b> mute · move mouse to aim</p>
+          <button id="btn-resume" class="btn">Resume ►</button>
+        </div>
+      </div>
+
+      <!-- LEVEL CLEAR -->
+      <div id="overlay-levelclear" class="overlay">
+        <div class="card">
+          <div class="stars">✦ ★ ✦</div>
+          <span class="kicker">level clear!</span>
+          <h2 id="lc-name">You cleared it!</h2>
+          <p class="big" id="lc-bonus">Level bonus +500</p>
+          <button id="btn-next" class="btn blue">Next level →</button>
+        </div>
+      </div>
+
+      <!-- GAME OVER -->
+      <div id="overlay-gameover" class="overlay">
+        <div class="card">
+          <span class="kicker" style="background:#a87cff">aw, the pits…</span>
+          <h2>Out of hearts</h2>
+          <p class="sub">Your score</p>
+          <div class="score-pop" id="go-score">0</div>
+          <p class="big" id="go-hi">High score 0</p>
+          <button id="btn-retry" class="btn yellow">Try again ↻</button>
+        </div>
+      </div>
+
+      <!-- WIN -->
+      <div id="overlay-win" class="overlay">
+        <div class="card">
+          <div class="stars">🌈 ✦ ★ ✦ 🌈</div>
+          <span class="kicker">you did it!</span>
+          <h2>Colour restored!</h2>
+          <p class="sub">Final score</p>
+          <div class="score-pop" id="win-score">0</div>
+          <p class="big" id="win-hi"></p>
+          <button id="btn-again" class="btn pink">Play again ✦</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/game.ts"></script>
+</body>
+</html>
