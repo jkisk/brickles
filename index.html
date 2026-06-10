@@ -122,6 +122,77 @@
   .how b { color: var(--ink); font-weight: 700; }
 
   .stars { font-size: 40px; letter-spacing: 8px; margin-bottom: 6px; }
+
+  .btn-row { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+  .btn-row .btn { padding: 18px 42px; font-size: 34px; }
+
+  /* ── Level select ── */
+  .card.levels { max-width: 980px; padding: 40px 44px 44px; }
+  .lvl-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .lvl-top h2 { font-size: 56px; margin: 0; }
+  .lvl-back {
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 5px solid var(--ink); background: #fff; color: var(--ink);
+    font-size: 34px; font-weight: 700; cursor: pointer; font-family: inherit;
+    box-shadow: 0 5px 0 rgba(52,33,90,0.35);
+  }
+  .lvl-back:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(52,33,90,0.35); }
+  .lvl-progress {
+    font-weight: 700; font-size: 28px; color: var(--ink);
+    background: #fff0a3; border: 5px solid var(--ink);
+    border-radius: 999px; padding: 8px 22px;
+  }
+  .world-band { margin-top: 22px; text-align: left; }
+  .world-pill {
+    display: inline-flex; align-items: center; gap: 14px;
+    background: #fff; border: 5px solid var(--ink); border-radius: 999px;
+    padding: 6px 24px 6px 8px;
+  }
+  .world-num {
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 4px solid var(--ink); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 26px;
+  }
+  .world-name  { font-weight: 700; font-size: 28px; color: var(--ink); }
+  .world-count { font-weight: 600; font-size: 22px; color: #6a5a86; }
+  .tiles { position: relative; display: flex; gap: 16px; margin-top: 16px; }
+  .tiles::before {
+    content: ''; position: absolute; left: 4%; right: 4%; top: 76px;
+    border-top: 5px dashed rgba(52,33,90,0.25);
+  }
+  .slot { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .tile {
+    width: 100%; aspect-ratio: 1;
+    border: 6px solid var(--ink); border-radius: 28px;
+    font-family: inherit; font-weight: 700; color: var(--ink); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    box-shadow: 0 7px 0 rgba(52,33,90,0.30);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .tile:not(.lock):active { transform: translateY(4px); box-shadow: 0 3px 0 rgba(52,33,90,0.30); }
+  .tile.done { background: #bdf3c8; }
+  .tile.cur  {
+    background: #ffd93b;
+    box-shadow: 0 0 0 9px rgba(255,159,67,0.45), 0 7px 0 rgba(52,33,90,0.30);
+  }
+  .tile.lock {
+    background: repeating-linear-gradient(45deg, #e7e0f0 0 14px, #ded4ec 14px 28px);
+    border-color: #9a8cb5; color: #9a8cb5; cursor: default;
+    box-shadow: 0 7px 0 rgba(110,95,140,0.25);
+  }
+  .t-icon { font-size: 40px; line-height: 1; }
+  .t-icon.star { color: #ffb000; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; font-size: 48px; }
+  .t-num  { font-size: 38px; line-height: 1.1; }
+  .t-best { font-size: 22px; font-weight: 600; }
+  .t-play {
+    font-size: 19px; letter-spacing: 1px; color: #fff;
+    background: #ff9f43; border: 4px solid var(--ink);
+    border-radius: 999px; padding: 2px 14px; margin-top: 4px;
+  }
+  .tile-name { font-weight: 600; font-size: 21px; color: #5a4a78; }
+  .tile-name.dim { color: #9a8cb5; }
+  .lvl-hint { margin-top: 26px; font-weight: 500; font-size: 23px; color: #6a5a86; }
 </style>
 </head>
 <body>
@@ -147,7 +218,23 @@
             <div class="row"><span class="chip" style="background:#a87cff">✦</span> Sticky — catch &amp; aim</div>
             <div class="row"><span class="chip" style="background:#ff5d6c">×</span> Chain bricks for combos</div>
           </div>
-          <button id="btn-start" class="btn pink">Play ✦</button>
+          <div class="btn-row">
+            <button id="btn-start" class="btn pink">Play ✦</button>
+            <button id="btn-levels" class="btn blue">Levels ★</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEVEL SELECT -->
+      <div id="overlay-levelselect" class="overlay">
+        <div class="card levels">
+          <div class="lvl-top">
+            <button id="btn-lvl-back" class="lvl-back" title="Back to title">‹</button>
+            <h2>Choose a Level</h2>
+            <span class="lvl-progress" id="lvl-progress">0 / 10 ★</span>
+          </div>
+          <div id="lvl-bands"></div>
+          <p class="lvl-hint">Tap a glowing tile to play · cleared levels can be replayed for a better score</p>
         </div>
       </div>
 
@@ -168,7 +255,10 @@
           <span class="kicker">level clear!</span>
           <h2 id="lc-name">You cleared it!</h2>
           <p class="big" id="lc-bonus">Level bonus +500</p>
-          <button id="btn-next" class="btn blue">Next level →</button>
+          <div class="btn-row">
+            <button id="btn-next" class="btn blue">Next level →</button>
+            <button id="btn-lc-map" class="btn yellow">Level map ★</button>
+          </div>
         </div>
       </div>
 
@@ -179,8 +269,11 @@
           <h2>Out of hearts</h2>
           <p class="sub">Your score</p>
           <div class="score-pop" id="go-score">0</div>
-          <p class="big" id="go-hi">High score 0</p>
-          <button id="btn-retry" class="btn yellow">Try again ↻</button>
+          <p class="big" id="go-hi"></p>
+          <div class="btn-row">
+            <button id="btn-retry" class="btn yellow">Try again ↻</button>
+            <button id="btn-go-map" class="btn blue">Level map ★</button>
+          </div>
         </div>
       </div>
 
@@ -193,7 +286,10 @@
           <p class="sub">Final score</p>
           <div class="score-pop" id="win-score">0</div>
           <p class="big" id="win-hi"></p>
-          <button id="btn-again" class="btn pink">Play again ✦</button>
+          <div class="btn-row">
+            <button id="btn-again" class="btn pink">Play again ✦</button>
+            <button id="btn-win-map" class="btn blue">Level map ★</button>
+          </div>
         </div>
       </div>
     </div>

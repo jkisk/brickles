@@ -1,4 +1,4 @@
-import { RB, INK, type ColorName, type BrickKind } from './levels.ts';
+import { RB, INK, type ColorName, type BrickKind, type World } from './levels.ts';
 
 // ── Shared render types ──────────────────────────────────────────────
 
@@ -115,11 +115,11 @@ function drawFace(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: 
   }
 }
 
-function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, fill: string): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(s, s);
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillStyle = fill;
   const puffs: [number, number, number][] = [[0, 0, 26], [28, 6, 22], [-28, 6, 22], [14, -10, 20], [-14, -10, 20]];
   ctx.beginPath();
   puffs.forEach(([px, py, pr]) => { ctx.moveTo(px + pr, py); ctx.arc(px, py, pr, 0, Math.PI * 2); });
@@ -130,19 +130,32 @@ function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
 
 // ── Exported draw functions ───────────────────────────────────────────
 
-export function drawBackground(ctx: CanvasRenderingContext2D, W: number, H: number, t: number, clouds: Cloud[], twinkles: Twinkle[]): void {
+export function drawBackground(ctx: CanvasRenderingContext2D, W: number, H: number, t: number, clouds: Cloud[], twinkles: Twinkle[], world: World): void {
   const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0,    '#cfe9ff');
-  sky.addColorStop(0.45, '#e7dcff');
-  sky.addColorStop(1,    '#ffe3f1');
+  sky.addColorStop(0,    world.sky[0]);
+  sky.addColorStop(0.45, world.sky[1]);
+  sky.addColorStop(1,    world.sky[2]);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
-  const sun = ctx.createRadialGradient(W * 0.18, H * 0.12, 10, W * 0.18, H * 0.12, 360);
-  sun.addColorStop(0, 'rgba(255,249,210,0.85)');
-  sun.addColorStop(1, 'rgba(255,249,210,0)');
-  ctx.fillStyle = sun;
+  const sx = W * 0.18, sy = H * 0.12;
+  const glow = ctx.createRadialGradient(sx, sy, 10, sx, sy, 360);
+  glow.addColorStop(0, world.night ? 'rgba(255,250,224,0.45)' : 'rgba(255,249,210,0.85)');
+  glow.addColorStop(1, world.night ? 'rgba(255,250,224,0)'    : 'rgba(255,249,210,0)');
+  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
+
+  if (world.night) {
+    // crescent moon: cream disc, then carve by re-filling an offset disc with
+    // the same sky gradient (gradients use canvas coords, so the seam is invisible)
+    ctx.fillStyle = '#fff2c4';
+    ctx.beginPath(); ctx.arc(sx, sy, 64, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(52,33,90,0.12)';
+    ctx.beginPath(); ctx.arc(sx - 22, sy + 14, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx - 4,  sy + 32, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = sky;
+    ctx.beginPath(); ctx.arc(sx + 28, sy - 12, 56, 0, Math.PI * 2); ctx.fill();
+  }
 
   const cx = W * 0.5, cy = H * 1.02;
   const bands = ['#ff7fc4', '#a87cff', '#4db5ff', '#5fd97a', '#ffd93b', '#ff9f43', '#ff5d6c'];
@@ -158,15 +171,17 @@ export function drawBackground(ctx: CanvasRenderingContext2D, W: number, H: numb
   });
   ctx.globalAlpha = 1;
 
-  clouds.forEach(cl => drawCloud(ctx, cl.x, cl.y, cl.s));
+  clouds.forEach(cl => drawCloud(ctx, cl.x, cl.y, cl.s, world.cloudFill));
 
-  twinkles.forEach(tw => {
+  const n = Math.min(world.twinkles, twinkles.length);
+  for (let i = 0; i < n; i++) {
+    const tw = twinkles[i];
     const tw2 = (Math.sin(t * tw.sp + tw.ph) + 1) / 2;
     ctx.globalAlpha = 0.25 + tw2 * 0.6;
     ctx.fillStyle = '#fffce0';
     starPath(ctx, tw.x, tw.y, tw.r * (0.6 + tw2 * 0.5), tw.r * 0.35, 4, t * 0.2 + tw.ph);
     ctx.fill();
-  });
+  }
   ctx.globalAlpha = 1;
 }
 
@@ -365,16 +380,20 @@ export function drawHUD(
   ctx.font = '600 42px Fredoka, sans-serif';
   ctx.fillText(score.toLocaleString(), 44, 80);
 
-  const hx = W - 60;
+  // keep clear of the pause/mute buttons overlaid at the top-right (right: 30..168px)
+  const hx = W - 196;
   ctx.textAlign = 'right';
   ctx.font = '700 24px Fredoka, sans-serif';
   ctx.fillStyle = INK;
   ctx.fillText('LIVES', hx, 40);
+  // compress the row when lives stack up so it never reaches the centered level text
+  const hsp = lives > 1 ? Math.min(42, 224 / (lives - 1)) : 42;
+  const hs = 34 * (hsp / 42);
   for (let i = 0; i < lives; i++) {
-    const hcx = W - 50 - i * 42, hcy = 80;
+    const hcx = W - 206 - i * hsp, hcy = 80;
     ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
-    heartPath(ctx, hcx, hcy, 34); ctx.stroke();
-    ctx.fillStyle = RB.pink.fill; heartPath(ctx, hcx, hcy, 34); ctx.fill();
+    heartPath(ctx, hcx, hcy, hs); ctx.stroke();
+    ctx.fillStyle = RB.pink.fill; heartPath(ctx, hcx, hcy, hs); ctx.fill();
   }
 
   ctx.textAlign = 'center';

@@ -17,7 +17,28 @@ export interface BrickDef {
 export interface Level {
   name: string;
   grid: string[];
+  world: number; // 1-based world id
 }
+
+export interface World {
+  id: number;
+  name: string;
+  mood: string;                  // label only
+  sky: [string, string, string]; // gradient stops, top → bottom
+  night: boolean;                // moon instead of sun
+  cloudFill: string;
+  accent: string;                // world badge colour on the level-select screen
+  twinkles: number;              // decor density
+}
+
+export const WORLDS: World[] = [
+  { id: 1, name: 'Meadow & Sky', mood: 'daytime',
+    sky: ['#9ed8ff', '#c5ecff', '#eafff4'], night: false,
+    cloudFill: 'rgba(255,255,255,0.9)', accent: '#4db5ff', twinkles: 18 },
+  { id: 2, name: 'Starlight & Sugar', mood: 'candy-night',
+    sky: ['#4a3b8f', '#8a5fc0', '#d98fd0'], night: true,
+    cloudFill: 'rgba(199,182,238,0.85)', accent: '#a87cff', twinkles: 40 },
+];
 
 export const RB: Record<ColorName, ColorEntry> = {
   red:    { fill: '#ff5d6c', shade: '#c2364a', light: '#ffb3bb' },
@@ -52,6 +73,7 @@ export const LEVELS: Level[] = [
   // ── original 6 ──────────────────────────────────────────────────────
   {
     name: 'Rainbow Land',
+    world: 1,
     grid: [
       '############',
       '############',
@@ -62,6 +84,7 @@ export const LEVELS: Level[] = [
   },
   {
     name: 'Sprite Meadow',
+    world: 1,
     grid: [
       '..S......S..',
       '.##########.',
@@ -73,6 +96,7 @@ export const LEVELS: Level[] = [
   },
   {
     name: 'Twin Hearts',
+    world: 1,
     grid: [
       '.HH....HH...',
       'HHHH..HHHH..',
@@ -86,6 +110,7 @@ export const LEVELS: Level[] = [
   },
   {
     name: 'Color Castle',
+    world: 1,
     grid: [
       '2..2..2..2.2',
       '############',
@@ -98,6 +123,7 @@ export const LEVELS: Level[] = [
   },
   {
     name: 'Sky Sprinkle',
+    world: 1,
     grid: [
       'S.#.#.#.#.#S',
       '.#.#.#.#.#.#',
@@ -110,6 +136,7 @@ export const LEVELS: Level[] = [
   },
   {
     name: 'Star Burst',
+    world: 2,
     grid: [
       '.....HH.....',
       '....#SS#....',
@@ -123,6 +150,7 @@ export const LEVELS: Level[] = [
   // ── new levels ──────────────────────────────────────────────────────
   {
     name: 'Candy Stripe',
+    world: 2,
     // solid rainbow rows — a colourful breather before the harder stretch
     grid: [
       'rrrrrrrrrrrr',
@@ -136,6 +164,7 @@ export const LEVELS: Level[] = [
   },
   {
     name: 'Diamond Drop',
+    world: 2,
     // diamond shape; strong bricks on the facets, hearts/sprites in the core
     grid: [
       '.....SS.....',
@@ -149,6 +178,7 @@ export const LEVELS: Level[] = [
   },
   {
     name: 'Checkerboard',
+    world: 2,
     // sparse alternating grid — tricky angles, no safe lanes
     grid: [
       'r.o.y.g.t.b.',
@@ -161,6 +191,7 @@ export const LEVELS: Level[] = [
   },
   {
     name: 'Final Flash',
+    world: 2,
     // dense fortress of 2-hit bricks; clear it to restore colour forever
     grid: [
       '222222222222',

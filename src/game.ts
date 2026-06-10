@@ -1,4 +1,4 @@
-import { RB, INK, LEVELS, brickFromChar, type ColorName } from './levels.ts';
+import { RB, INK, LEVELS, WORLDS, brickFromChar, type ColorName } from './levels.ts';
 import { Sound } from './audio.ts';
 import {
   drawBackground, drawBrick, drawPaddle, drawBall,
@@ -37,7 +37,7 @@ const clouds: Cloud[] = [
   { x: W * 0.1,  y: H * 0.62, s: 0.7,  vx: 7   },
   { x: W * 0.9,  y: H * 0.55, s: 0.95, vx: 6.5 },
 ];
-const twinkles: Twinkle[] = Array.from({ length: 26 }, () => ({
+const twinkles: Twinkle[] = Array.from({ length: Math.max(...WORLDS.map(w => w.twinkles)) }, () => ({
   x: Math.random() * W, y: Math.random() * H * 0.8,
   r: 4 + Math.random() * 7, sp: 1 + Math.random() * 3, ph: Math.random() * 7,
 }));
@@ -67,13 +67,13 @@ function randomPU(): PowerUpDef {
 
 // ── Game state ────────────────────────────────────────────────────────
 
-type GameState = 'title' | 'serve' | 'play' | 'paused' | 'levelclear' | 'gameover' | 'win';
+type GameState = 'title' | 'serve' | 'play' | 'paused' | 'levelclear' | 'gameover' | 'win' | 'levelselect';
 
 let state: GameState = 'title';
 let levelIdx = 0;
 let score = 0;
+let levelStartScore = 0;
 let lives = 5;
-let highScore = +(localStorage.getItem('brickles_hi') ?? '0');
 let combo = 0, comboTimer = 0, bestCombo = 0;
 let bricks: Brick[] = [], balls: Ball[] = [], powerups: PowerUp[] = [];
 let particles: Particle[] = [], floaters: Floater[] = [];
@@ -84,6 +84,37 @@ let baseSpeed = 520;
 let shake = 0;
 let mouseX = W / 2;
 
+function currentWorld() {
+  return WORLDS[LEVELS[levelIdx].world - 1] ?? WORLDS[0];
+}
+
+// ── Progress (unlocks + per-level bests) ──────────────────────────────
+
+interface Progress {
+  maxUnlocked: number;          // 0-based, highest playable level index
+  best: Record<number, number>; // level index → best score for that level
+}
+
+function loadProgress(): Progress {
+  try {
+    const p = JSON.parse(localStorage.getItem('brickles_progress') ?? '');
+    if (typeof p?.maxUnlocked === 'number' && p.best && typeof p.best === 'object') {
+      return { maxUnlocked: Math.min(p.maxUnlocked, LEVELS.length - 1), best: p.best };
+    }
+  } catch { /* fall through to fresh progress */ }
+  return { maxUnlocked: 0, best: {} };
+}
+
+const progress: Progress = loadProgress();
+
+function saveProgress(): void {
+  localStorage.setItem('brickles_progress', JSON.stringify(progress));
+}
+
+function clearedCount(): number {
+  return Object.keys(progress.best).length;
+}
+
 // ── Level builder ─────────────────────────────────────────────────────
 
 function buildLevel(i: number): void {
@@ -91,7 +122,7 @@ function buildLevel(i: number): void {
   bricks = [];
   const cols = Math.max(...lvl.grid.map(r => r.length));
   const margin = 70, gap = 10;
-  const top = HUD_H + 40;
+  const top = HUD_H + 150;
   const bw = (W - margin * 2 - gap * (cols - 1)) / cols;
   const bh = 44;
   lvl.grid.forEach((row, ry) => {
@@ -108,6 +139,7 @@ function buildLevel(i: number): void {
     }
   });
   baseSpeed = 510 + i * 35;
+  levelStartScore = score;
   paddle.w = paddle.baseW;
   effects = { wide: 0, slow: 0, sticky: 0 };
   speedMul = speedMulTarget = 1;
@@ -178,8 +210,10 @@ function applyPowerup(pu: PowerUp): void {
     balls.push(...add.slice(0, 6));
     floatText(pu.x, pu.y, 'MULTI-BALL!', RB.blue.shade);
   } else if (pu.type === 'wide') {
-    effects.wide = 13; paddle.w = paddle.baseW * 1.6;
-    floatText(pu.x, pu.y, 'WIDE!', RB.green.shade);
+    const wasWide = effects.wide > 0;
+    effects.wide = 13;
+    paddle.w = Math.min(paddle.w * 1.6, paddle.baseW * 2.5);
+    floatText(pu.x, pu.y, wasWide ? 'WIDER!' : 'WIDE!', RB.green.shade);
   } else if (pu.type === 'slow') {
     effects.slow = 11; speedMulTarget = 0.6;
     floatText(pu.x, pu.y, 'SLOW-MO', RB.teal.shade);
@@ -242,7 +276,8 @@ function update(dt: number): void {
   for (let i = balls.length - 1; i >= 0; i--) {
     const b = balls[i];
     if (b.stuck) {
-      b.x = paddle.x + paddle.w / 2;
+      // clamp so the ball stays on the paddle if it shrinks while stuck (WIDE expiring)
+      b.x = paddle.x + Math.max(0, Math.min(paddle.w, b.relX ?? paddle.w / 2));
       b.y = paddle.y - b.r - 6;
       continue;
     }
@@ -320,8 +355,6 @@ function update(dt: number): void {
     if (f.life <= 0) floaters.splice(i, 1);
   }
 
-  if (shake > 0) shake = Math.max(0, shake - dt * 30);
-
   if (bricks.length === 0) levelClear();
 }
 
@@ -330,10 +363,14 @@ function update(dt: number): void {
 function levelClear(): void {
   score += 500;
   Sound.levelClear();
+  const earned = score - levelStartScore;
+  progress.best[levelIdx] = Math.max(progress.best[levelIdx] ?? 0, earned);
+  progress.maxUnlocked = Math.min(Math.max(progress.maxUnlocked, levelIdx + 1), LEVELS.length - 1);
+  saveProgress();
   if (levelIdx >= LEVELS.length - 1) { endGame(true); return; }
   state = 'levelclear';
-  saveHi();
-  (document.getElementById('lc-bonus') as HTMLElement).textContent = 'Level bonus  +500';
+  (document.getElementById('lc-bonus') as HTMLElement).textContent =
+    'Level score  ' + earned.toLocaleString() + '  ·  best  ' + progress.best[levelIdx].toLocaleString();
   (document.getElementById('lc-name')  as HTMLElement).textContent = 'You cleared ' + LEVELS[levelIdx].name + '!';
   show('overlay-levelclear');
 }
@@ -347,31 +384,34 @@ function nextLevel(): void {
 
 function endGame(won: boolean): void {
   state = won ? 'win' : 'gameover';
-  saveHi();
   if (won) {
     Sound.win();
     (document.getElementById('win-score') as HTMLElement).textContent = score.toLocaleString();
     (document.getElementById('win-hi')    as HTMLElement).textContent =
-      'Best combo ×' + bestCombo + '  •  High score ' + highScore.toLocaleString();
+      'Best combo ×' + bestCombo + '  •  ' + clearedCount() + ' / ' + LEVELS.length + ' levels cleared';
     show('overlay-win');
   } else {
     Sound.life();
+    const best = progress.best[levelIdx];
     (document.getElementById('go-score') as HTMLElement).textContent = score.toLocaleString();
-    (document.getElementById('go-hi')    as HTMLElement).textContent = 'High score ' + highScore.toLocaleString();
+    (document.getElementById('go-hi')    as HTMLElement).textContent =
+      best != null ? 'Best on ' + LEVELS[levelIdx].name + '  ' + best.toLocaleString() : '';
     show('overlay-gameover');
   }
 }
 
-function saveHi(): void {
-  if (score > highScore) { highScore = score; localStorage.setItem('brickles_hi', String(highScore)); }
-}
-
-function startGame(): void {
-  levelIdx = 0; score = 0; lives = 5; bestCombo = 0; combo = 0;
-  buildLevel(0);
+function startAt(idx: number): void {
+  levelIdx = Math.min(idx, LEVELS.length - 1);
+  score = 0; lives = 5; bestCombo = 0; combo = 0;
+  buildLevel(levelIdx);
   state = 'serve';
   hideAll();
   Sound.init();
+}
+
+function startGame(): void {
+  // "Play" continues at the furthest unlocked level; level select covers replays
+  startAt(progress.maxUnlocked);
 }
 
 // ── Render ────────────────────────────────────────────────────────────
@@ -381,7 +421,7 @@ let t = 0;
 function render(): void {
   ctx.save();
   if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
-  drawBackground(ctx, W, H, t, clouds, twinkles);
+  drawBackground(ctx, W, H, t, clouds, twinkles, currentWorld());
 
   bricks.forEach(b => drawBrick(ctx, b, t));
   powerups.forEach(p => drawPowerup(ctx, p, t));
@@ -424,6 +464,7 @@ function loop(now: number): void {
   let dt = (now - last) / 1000; last = now;
   if (dt > 0.05) dt = 0.05;
   t += dt;
+  if (shake > 0) shake = Math.max(0, shake - dt * 30);
   if (state === 'play' || state === 'serve' || state === 'title') update(dt);
   render();
   requestAnimationFrame(loop);
@@ -507,20 +548,98 @@ window.addEventListener('keydown', e => {
   if (e.code === 'ArrowRight')  mouseX = Math.min(W, mouseX + 60);
 });
 
+// ── Level select ──────────────────────────────────────────────────────
+
+function openLevelSelect(): void {
+  state = 'levelselect';
+  buildLevelSelectUI();
+  show('overlay-levelselect');
+}
+
+function backToTitle(): void {
+  state = 'title';
+  updateTitle();
+  show('overlay-title');
+}
+
+function buildLevelSelectUI(): void {
+  (document.getElementById('lvl-progress') as HTMLElement).textContent =
+    clearedCount() + ' / ' + LEVELS.length + ' ★';
+
+  const bands = document.getElementById('lvl-bands') as HTMLElement;
+  bands.innerHTML = '';
+
+  WORLDS.forEach(w => {
+    const idxs = LEVELS.map((_, i) => i).filter(i => LEVELS[i].world === w.id);
+    const cleared = idxs.filter(i => progress.best[i] != null).length;
+
+    const band = document.createElement('div');
+    band.className = 'world-band';
+    band.innerHTML =
+      '<div class="world-pill">' +
+        '<span class="world-num" style="background:' + w.accent + '">' + w.id + '</span>' +
+        '<span class="world-name">' + w.name + '</span>' +
+        '<span class="world-count">' + cleared + ' / ' + idxs.length + ' cleared</span>' +
+      '</div><div class="tiles"></div>';
+
+    const tiles = band.querySelector('.tiles') as HTMLElement;
+    idxs.forEach(i => {
+      const done = progress.best[i] != null;
+      const locked = i > progress.maxUnlocked;
+      // the final level keeps a little mystery until it unlocks
+      const name = locked && i === LEVELS.length - 1 ? '???' : LEVELS[i].name;
+
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      const tile = document.createElement('button');
+      tile.className = 'tile ' + (locked ? 'lock' : done ? 'done' : 'cur');
+      tile.innerHTML = locked
+        ? '<span class="t-icon">🔒</span><span class="t-num">' + (i + 1) + '</span>'
+        : done
+          ? '<span class="t-icon star">★</span><span class="t-best">' + progress.best[i].toLocaleString() + '</span>'
+          : '<span class="t-num">' + (i + 1) + '</span><span class="t-play">PLAY</span>';
+      if (locked) {
+        tile.disabled = true;
+      } else {
+        tile.addEventListener('click', () => startAt(i));
+      }
+      slot.appendChild(tile);
+      const label = document.createElement('span');
+      label.className = 'tile-name' + (locked ? ' dim' : '');
+      label.textContent = name;
+      slot.appendChild(label);
+      tiles.appendChild(slot);
+    });
+
+    bands.appendChild(band);
+  });
+}
+
 // ── Buttons ───────────────────────────────────────────────────────────
 
 document.getElementById('btn-start')! .addEventListener('click', startGame);
 document.getElementById('btn-next')!  .addEventListener('click', nextLevel);
-document.getElementById('btn-retry')! .addEventListener('click', startGame);
-document.getElementById('btn-again')! .addEventListener('click', startGame);
+document.getElementById('btn-retry')! .addEventListener('click', () => startAt(levelIdx));
+document.getElementById('btn-again')! .addEventListener('click', () => startAt(0));
 document.getElementById('btn-resume')!.addEventListener('click', togglePause);
 document.getElementById('btn-pause')! .addEventListener('click', togglePause);
 document.getElementById('btn-mute')!  .addEventListener('click', toggleMute);
+document.getElementById('btn-levels')!  .addEventListener('click', openLevelSelect);
+document.getElementById('btn-lc-map')!  .addEventListener('click', openLevelSelect);
+document.getElementById('btn-go-map')!  .addEventListener('click', openLevelSelect);
+document.getElementById('btn-win-map')! .addEventListener('click', openLevelSelect);
+document.getElementById('btn-lvl-back')!.addEventListener('click', backToTitle);
 
 // ── Boot ──────────────────────────────────────────────────────────────
 
-(document.getElementById('title-hi') as HTMLElement).textContent =
-  highScore > 0 ? 'High score  ' + highScore.toLocaleString() : 'No high score yet — go make one!';
+function updateTitle(): void {
+  const n = clearedCount();
+  (document.getElementById('title-hi') as HTMLElement).textContent =
+    n > 0 ? n + ' / ' + LEVELS.length + ' levels cleared ★' : 'Ten levels of colour to restore!';
+  (document.getElementById('btn-start') as HTMLElement).textContent =
+    progress.maxUnlocked > 0 ? 'Continue ✦' : 'Play ✦';
+}
 
+updateTitle();
 show('overlay-title');
 requestAnimationFrame(loop);
