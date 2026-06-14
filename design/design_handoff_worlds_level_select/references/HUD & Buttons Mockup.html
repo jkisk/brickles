@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brickles — HUD &amp; Buttons Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#34215a; --ink-soft:#6a5a8c; --ink-dk:#1d1336;
+    --paper:#fdf6ff; --card:#ffffff; --line:#e7dcf2;
+    --pink:#ff7fc4; --pink-sh:#cc4d93;
+    --purple:#a87cff; --purple-sh:#7148cc;
+    --blue:#4db5ff; --blue-sh:#1d7fcc;
+    --yellow:#ffd93b;
+    --radius:22px; --pageW:1000px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; font-family:'Nunito',system-ui,sans-serif; color:var(--ink); line-height:1.6;
+    background:
+      radial-gradient(1200px 600px at 80% -8%, #ffe9f6 0%, rgba(255,233,246,0) 60%),
+      radial-gradient(1100px 620px at 0% 4%, #e6f3ff 0%, rgba(230,243,255,0) 55%),
+      var(--paper);
+  }
+  .wrap{ max-width:var(--pageW); margin:0 auto; padding:0 28px 120px; }
+  h1,h2,h3,h4{ font-family:'Fredoka',sans-serif; font-weight:600; letter-spacing:-.01em; }
+  h2{ font-size:28px; margin:0 0 4px; }
+  h4{ font-size:13px; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-soft); margin:0 0 8px; font-weight:600; }
+  p{ margin:0 0 12px; max-width:70ch; text-wrap:pretty; }
+  code{ font-family:'JetBrains Mono',monospace; font-size:.86em; background:#f1e9fb; border:1px solid var(--line); border-radius:6px; padding:1px 6px; color:var(--purple-sh); white-space:nowrap; }
+
+  header.hero{ padding:60px 0 26px; }
+  .kicker{
+    display:inline-flex; align-items:center; gap:9px;
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:13px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink); background:#fff; border:3px solid var(--ink); border-radius:999px; padding:7px 16px; box-shadow:0 4px 0 var(--ink);
+  }
+  .kicker .dot{ width:11px; height:11px; border-radius:50%; background:var(--pink); border:2.5px solid var(--ink); }
+  header.hero h1{ font-family:'Fredoka',sans-serif; font-size:48px; font-weight:700; margin:22px 0 12px; letter-spacing:-.02em; line-height:1.12; }
+  .lede{ font-size:18px; color:var(--ink-soft); max-width:62ch; }
+
+  .sec-head{ display:flex; align-items:center; gap:14px; border-bottom:3px dashed var(--line); padding-bottom:14px; margin:50px 0 26px; }
+  .sec-no{ font-family:'Fredoka',sans-serif; font-weight:700; font-size:15px; color:#fff; background:var(--ink); border-radius:10px; padding:4px 11px; box-shadow:0 3px 0 var(--ink-dk); }
+
+  /* ════ HUD demo bar — the real component, both themes ════ */
+  .demo{ border:3px solid var(--ink); border-radius:var(--radius); overflow:hidden; box-shadow:0 6px 0 var(--ink); margin:14px 0 6px; }
+  .demo .sky{ padding:26px; }
+  .sky.day{ background:linear-gradient(180deg,#bfe6ff,#dff1ff 70%,#eafff4); }
+  .sky.night{ background:linear-gradient(180deg,#3a2c72,#5b4b9e 55%,#8a5fc0); }
+
+  /* the HUD bar itself */
+  .hud{
+    display:flex; align-items:center; justify-content:space-between; gap:18px;
+    border:4px solid var(--ink); border-radius:18px; padding:12px 16px;
+    box-shadow:0 6px 0 var(--ink);
+  }
+  /* — improved theming — */
+  .hud.day{   background:rgba(255,255,255,.78); backdrop-filter:blur(3px); }
+  .hud.night{ background:rgba(52,33,90,.42);  backdrop-filter:blur(3px); }
+
+  /* current (before) variants for comparison */
+  .hud.before{ background:rgba(255,255,255,.34); box-shadow:0 6px 0 rgba(52,33,90,.5); border-color:rgba(52,33,90,.55); }
+
+  .hud .block{ display:flex; flex-direction:column; line-height:1; }
+  .hud .lbl{ font-family:'Fredoka',sans-serif; font-weight:600; font-size:14px; letter-spacing:.14em; text-transform:uppercase; }
+  .hud .val{ font-family:'Fredoka',sans-serif; font-weight:700; font-size:30px; margin-top:3px; }
+  .hud .title{ font-family:'Fredoka',sans-serif; font-weight:700; font-size:24px; letter-spacing:.01em; }
+
+  /* text colour per theme */
+  .hud.day .lbl{ color:var(--ink-soft); }
+  .hud.day .val, .hud.day .title{ color:var(--ink); }
+  .hud.night .lbl{ color:#cdbff0; }
+  .hud.night .val, .hud.night .title{ color:#fff; text-shadow:0 2px 0 var(--ink-dk), 0 0 1px var(--ink-dk); }
+
+  /* before/night = low contrast purple-on-lavender (the problem) */
+  .hud.before.night .lbl{ color:#8a78bd; }
+  .hud.before.night .val, .hud.before.night .title{ color:#6a4fb0; text-shadow:none; }
+  .hud.before.day .lbl{ color:var(--ink-soft); }
+  .hud.before.day .val, .hud.before.day .title{ color:var(--ink); }
+
+  .lives{ display:flex; gap:7px; align-items:center; }
+  .lives .h{ width:24px; height:22px; }
+
+  /* control buttons */
+  .ctrls{ display:flex; gap:10px; }
+  .btn{
+    width:48px; height:48px; border-radius:50%; border:4px solid var(--ink);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 5px 0 var(--ink); background:#fff;
+  }
+  .btn svg{ width:22px; height:22px; }
+  /* the BEFORE mismatch: one dark, one light */
+  .btn.dark{ background:var(--ink); border-color:var(--ink); box-shadow:0 5px 0 var(--ink-dk); }
+
+  .center-title{ text-align:center; flex:1; }
+
+  .twocol{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media(max-width:760px){ .twocol{ grid-template-columns:1fr; } }
+  .panel{ background:#fff; border:3px solid var(--line); border-radius:var(--radius); padding:18px 20px; }
+  .panel.bad{ border-color:#f0c8d8; }
+  .panel.good{ border-color:#bfe6c9; }
+  .tag{ display:inline-block; font-family:'Fredoka',sans-serif; font-weight:600; font-size:12px; letter-spacing:.1em; text-transform:uppercase; border-radius:999px; padding:3px 12px; margin-bottom:12px; }
+  .tag.bad{ background:#ffe2ec; color:#cc4d93; }
+  .tag.good{ background:#e6fbef; color:#2f9e4c; }
+
+  .note{ font-size:13.5px; color:var(--ink-soft); }
+  ul.tight{ margin:6px 0 12px; padding-left:20px; font-size:14px; }
+  ul.tight li{ margin:4px 0; }
+  ul.tight code{ font-size:12px; }
+
+  pre{ background:#2a1c47; color:#efe7ff; border:3px solid var(--ink); border-radius:16px; padding:16px 18px; overflow:auto; box-shadow:0 6px 0 var(--ink); font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.7; margin:14px 0; }
+  pre .c{ color:#9d86c9; } pre .k{ color:#ff9fd0; } pre .s{ color:#a9eef0; } pre .f{ color:#8fd0ff; } pre .n{ color:#ffd93b; }
+
+  .btnrow{ display:flex; gap:30px; align-items:center; flex-wrap:wrap; }
+  .btngroup{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .btngroup .cap{ font-size:12px; font-weight:700; color:var(--ink-soft); }
+  /* show button pair on a neutral tile */
+  .btnstage{ background:linear-gradient(180deg,#efe6ff,#fbeffa); border:3px solid var(--line); border-radius:18px; padding:20px 26px; }
+  footer.doc{ margin-top:60px; padding-top:22px; border-top:3px dashed var(--line); font-size:13px; color:var(--ink-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  @media print{ .demo,.btn,pre{ box-shadow:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <span class="kicker"><span class="dot"></span>Brickles · HUD Mockup</span>
+    <h1>Per-world HUD &amp; unified buttons</h1>
+    <p class="lede">The two highest-leverage fixes, in-language: a HUD that re-themes between the daytime and candy-night worlds so the level title always reads, and a matched pair of control buttons. Before / after for each, with the exact CSS to drop in.</p>
+  </header>
+
+  <!-- ════ 1 · HUD CONTRAST ════ -->
+  <section>
+    <div class="sec-head"><span class="sec-no">01</span><h2>HUD that re-themes per world</h2></div>
+    <p>Same component, two themes driven off <code>WORLDS[n].mood</code>. Daytime keeps ink-purple text on a brighter glass bar; candy-night switches to <strong>white text with an ink shadow</strong> and a darker translucent fill so the title stops sinking into the sky.</p>
+
+    <div class="twocol">
+      <!-- BEFORE -->
+      <div class="panel bad">
+        <span class="tag bad">Before · night world</span>
+        <div class="demo">
+          <div class="sky night">
+            <div class="hud before night">
+              <div class="block"><span class="lbl">Score</span><span class="val">5,136</span></div>
+              <div class="center-title"><span class="title">Final Flash</span></div>
+              <div class="block" style="align-items:flex-end;"><span class="lbl">Lives</span>
+                <div class="lives" style="margin-top:5px;">
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">“Final Flash” is purple-on-lavender — low contrast, the title fades into the night sky.</p>
+      </div>
+
+      <!-- AFTER -->
+      <div class="panel good">
+        <span class="tag good">After · night world</span>
+        <div class="demo">
+          <div class="sky night">
+            <div class="hud night">
+              <div class="block"><span class="lbl">Score</span><span class="val">5,136</span></div>
+              <div class="center-title"><span class="title">Final Flash</span></div>
+              <div class="block" style="align-items:flex-end;"><span class="lbl">Lives</span>
+                <div class="lives" style="margin-top:5px;">
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">White title + ink shadow on a deeper glass fill — reads crisply against any night gradient.</p>
+      </div>
+    </div>
+
+    <div class="twocol" style="margin-top:18px;">
+      <!-- DAY before -->
+      <div class="panel bad">
+        <span class="tag bad">Before · day world</span>
+        <div class="demo">
+          <div class="sky day">
+            <div class="hud before day">
+              <div class="block"><span class="lbl">Score</span><span class="val">0</span></div>
+              <div class="center-title"><span class="title">Sprite Meadow</span></div>
+              <div class="block" style="align-items:flex-end;"><span class="lbl">Lives</span>
+                <div class="lives" style="margin-top:5px;">
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">Day already works — but the bar fill is faint and the outline washes out on bright sky.</p>
+      </div>
+      <!-- DAY after -->
+      <div class="panel good">
+        <span class="tag good">After · day world</span>
+        <div class="demo">
+          <div class="sky day">
+            <div class="hud day">
+              <div class="block"><span class="lbl">Score</span><span class="val">0</span></div>
+              <div class="center-title"><span class="title">Sprite Meadow</span></div>
+              <div class="block" style="align-items:flex-end;"><span class="lbl">Lives</span>
+                <div class="lives" style="margin-top:5px;">
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                  <svg class="h" viewBox="0 0 24 22"><path d="M12 21C5 16 1 12 1 7.5 1 4 3.5 2 6 2c2 0 3.5 1.3 6 4 2.5-2.7 4-4 6-4 2.5 0 5 2 5 5.5C23 12 19 16 12 21Z" fill="#ff7fc4" stroke="#34215a" stroke-width="2"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">Brighter glass fill + full-weight ink outline; ink-purple text stays as-is. Consistent with night.</p>
+      </div>
+    </div>
+
+    <h4 style="margin-top:26px;">The theming hook</h4>
+<pre><span class="c">// one class on the HUD, set from the active world's mood</span>
+hud.className = <span class="s">'hud '</span> + (world.mood === <span class="s">'candy-night'</span> ? <span class="s">'night'</span> : <span class="s">'day'</span>);
+
+<span class="c">/* CSS */</span>
+.hud.day   { background:rgba(<span class="n">255,255,255</span>,.78); }
+.hud.day   .title,.val { color:<span class="s">#34215a</span>; }            <span class="c">// ink</span>
+.hud.night { background:rgba(<span class="n">52,33,90</span>,.42); }
+.hud.night .title,.val { color:<span class="s">#fff</span>;
+             text-shadow:<span class="n">0 2px 0</span> <span class="s">#1d1336</span>; }     <span class="c">// white + ink shadow</span></pre>
+  </section>
+
+  <!-- ════ 2 · BUTTONS ════ -->
+  <section>
+    <div class="sec-head"><span class="sec-no">02</span><h2>One button family</h2></div>
+    <p>Right now pause is a white circle and mute is a dark circle — they read as two systems. Unify on the <strong>white-fill + ink-outline + hard-shadow</strong> treatment the rest of the game uses. The <em>active/muted</em> state can invert to ink-fill, so “dark” still means something — it signals state, not a different button.</p>
+
+    <div class="btnstage">
+      <div class="btnrow">
+        <div class="btngroup">
+          <span class="cap">BEFORE — mismatched</span>
+          <div class="ctrls">
+            <span class="btn"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="#34215a"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="#34215a"/></svg></span>
+            <span class="btn dark"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="#fff"/><path d="M16 9c1.2 1.2 1.2 4.8 0 6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>
+          </div>
+        </div>
+
+        <div class="btngroup">
+          <span class="cap">AFTER — unified (sound on)</span>
+          <div class="ctrls">
+            <span class="btn"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="#34215a"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="#34215a"/></svg></span>
+            <span class="btn"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="#34215a"/><path d="M16 9c1.2 1.2 1.2 4.8 0 6M18.5 7c2.2 2.2 2.2 7.8 0 10" stroke="#34215a" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>
+          </div>
+        </div>
+
+        <div class="btngroup">
+          <span class="cap">AFTER — muted state (inverts)</span>
+          <div class="ctrls">
+            <span class="btn"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="#34215a"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="#34215a"/></svg></span>
+            <span class="btn dark"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="#fff"/><path d="M16 9l5 6M21 9l-5 6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="tight" style="margin-top:18px;">
+      <li><strong>Same silhouette:</strong> both 48px, <code>4px</code> ink border, <code>0 5px 0 #34215a</code> shadow.</li>
+      <li><strong>Default = white fill, ink glyph.</strong> Use for pause and sound-on.</li>
+      <li><strong>State change = invert to ink fill, white glyph</strong> — and swap the glyph to a clear ✕ over the speaker for “muted”. Dark now reads as “off”, which is meaningful, instead of an arbitrary style difference.</li>
+    </ul>
+  </section>
+
+  <footer class="doc">
+    <span>Brickles · HUD &amp; buttons mockup</span>
+    <span>Pastel + ink · #34215a · Fredoka</span>
+  </footer>
+</div>
+</body>
+</html>

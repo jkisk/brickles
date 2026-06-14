@@ -442,7 +442,7 @@ function render(): void {
     balls.forEach(b => drawBall(ctx, b, t));
   }
 
-  drawHUD(ctx, W, HUD_H, score, lives, LEVELS[levelIdx].name, effects, combo);
+  drawHUD(ctx, W, HUD_H, score, lives, LEVELS[levelIdx].name, effects, combo, currentWorld());
 
   if (state === 'serve') {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -526,7 +526,7 @@ function togglePause(): void {
 
 function toggleMute(): void {
   const m = Sound.toggle();
-  (document.getElementById('btn-mute') as HTMLElement).textContent = m ? '🔇' : '🔊';
+  (document.getElementById('btn-mute') as HTMLElement).classList.toggle('muted', m);
 }
 
 window.addEventListener('keydown', e => {
@@ -574,13 +574,15 @@ function buildLevelSelectUI(): void {
     const cleared = idxs.filter(i => progress.best[i] != null).length;
 
     const band = document.createElement('div');
-    band.className = 'world-band';
+    band.className = 'band' + (w.night ? ' dusk' : '');
     band.innerHTML =
-      '<div class="world-pill">' +
-        '<span class="world-num" style="background:' + w.accent + '">' + w.id + '</span>' +
-        '<span class="world-name">' + w.name + '</span>' +
-        '<span class="world-count">' + cleared + ' / ' + idxs.length + ' cleared</span>' +
-      '</div><div class="tiles"></div>';
+      '<div class="band-head">' +
+        '<div class="band-pill">' +
+          '<span class="wno" style="background:' + w.accent + '">' + w.id + '</span>' +
+          '<span class="wtxt"><b>' + w.name + '</b>' +
+            '<span>World ' + w.id + ' · ' + cleared + ' / ' + idxs.length + ' cleared</span></span>' +
+        '</div><div class="band-rule"></div>' +
+      '</div><div class="tiles"><div class="trail"></div></div>';
 
     const tiles = band.querySelector('.tiles') as HTMLElement;
     idxs.forEach(i => {
@@ -589,26 +591,28 @@ function buildLevelSelectUI(): void {
       // the final level keeps a little mystery until it unlocks
       const name = locked && i === LEVELS.length - 1 ? '???' : LEVELS[i].name;
 
-      const slot = document.createElement('div');
-      slot.className = 'slot';
-      const tile = document.createElement('button');
+      const tile = document.createElement('div');
       tile.className = 'tile ' + (locked ? 'lock' : done ? 'done' : 'cur');
-      tile.innerHTML = locked
-        ? '<span class="t-icon">🔒</span><span class="t-num">' + (i + 1) + '</span>'
+      const pad = document.createElement('button');
+      pad.className = 'pad';
+      pad.innerHTML = locked
+        ? '<span class="badge">🔒</span><span class="num">' + (i + 1) + '</span>'
         : done
-          ? '<span class="t-icon star">★</span><span class="t-best">' + progress.best[i].toLocaleString() + '</span>'
-          : '<span class="t-num">' + (i + 1) + '</span><span class="t-play">PLAY</span>';
+          ? '<span class="badge">★</span><span class="num">' + (i + 1) + '</span>' +
+            '<span class="score">' + progress.best[i].toLocaleString() + '</span>'
+          : '<span class="badge">▶</span><span class="num">' + (i + 1) + '</span>' +
+            '<span class="play">PLAY</span>';
       if (locked) {
-        tile.disabled = true;
+        pad.disabled = true;
       } else {
-        tile.addEventListener('click', () => startAt(i));
+        pad.addEventListener('click', () => startAt(i));
       }
-      slot.appendChild(tile);
-      const label = document.createElement('span');
-      label.className = 'tile-name' + (locked ? ' dim' : '');
+      tile.appendChild(pad);
+      const label = document.createElement('div');
+      label.className = 'nm';
       label.textContent = name;
-      slot.appendChild(label);
-      tiles.appendChild(slot);
+      tile.appendChild(label);
+      tiles.appendChild(tile);
     });
 
     bands.appendChild(band);

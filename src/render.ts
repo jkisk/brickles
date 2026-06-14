@@ -1,4 +1,4 @@
-import { RB, INK, type ColorName, type BrickKind, type World } from './levels.ts';
+import { RB, INK, INK_DK, type ColorName, type BrickKind, type World } from './levels.ts';
 
 // ── Shared render types ──────────────────────────────────────────────
 
@@ -366,25 +366,48 @@ export function drawHUD(
   levelName: string,
   effects: Effects,
   combo: number,
+  world: World,
 ): void {
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  roundRect(ctx, 14, 12, W - 28, HUD - 22, 22); ctx.fill();
-  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(168,124,255,0.5)';
-  roundRect(ctx, 14, 12, W - 28, HUD - 22, 22); ctx.stroke();
+  const night = world.night;
+  const bx = 14, by = 12, bw = W - 28, bh = HUD - 22;
+
+  // hard ink drop shadow — clip out the bar shape so it doesn't darken the
+  // translucent glass fill (same as CSS box-shadow clipping at the border box)
+  ctx.save();
+  roundRect(ctx, bx, by, bw, bh, 22);
+  ctx.rect(0, 0, W, HUD * 2);
+  ctx.clip('evenodd');
+  ctx.fillStyle = INK;
+  roundRect(ctx, bx, by + 6, bw, bh, 22); ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = night ? 'rgba(52,33,90,0.42)' : 'rgba(255,255,255,0.78)';
+  roundRect(ctx, bx, by, bw, bh, 22); ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = INK;
+  roundRect(ctx, bx, by, bw, bh, 22); ctx.stroke();
+
+  const lblColor = night ? '#cdbff0' : '#6a5a8c';
+  const valColor = night ? '#ffffff' : INK;
+  // night values get an offset dark-ink shadow so they read on any sky
+  const text = (s: string, x: number, y: number, color: string) => {
+    if (night) { ctx.fillStyle = INK_DK; ctx.fillText(s, x, y + 2); }
+    ctx.fillStyle = color;
+    ctx.fillText(s, x, y);
+  };
 
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
-  ctx.fillStyle = INK;
+  ctx.fillStyle = lblColor;
   ctx.font = '700 30px Fredoka, sans-serif';
   ctx.fillText('SCORE', 44, 44);
   ctx.font = '600 42px Fredoka, sans-serif';
-  ctx.fillText(score.toLocaleString(), 44, 80);
+  text(score.toLocaleString(), 44, 80, valColor);
 
   // keep clear of the pause/mute buttons overlaid at the top-right (right: 30..168px)
   const hx = W - 196;
   ctx.textAlign = 'right';
   ctx.font = '700 24px Fredoka, sans-serif';
-  ctx.fillStyle = INK;
+  ctx.fillStyle = lblColor;
   ctx.fillText('LIVES', hx, 40);
   // compress the row when lives stack up so it never reaches the centered level text
   const hsp = lives > 1 ? Math.min(42, 224 / (lives - 1)) : 42;
@@ -397,9 +420,17 @@ export function drawHUD(
   }
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = RB.purple.shade;
   ctx.font = '600 28px Fredoka, sans-serif';
-  ctx.fillText(levelName, W / 2, 38);
+  if (night) {
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 5; ctx.strokeStyle = INK_DK;
+    ctx.strokeText(levelName, W / 2, 38);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(levelName, W / 2, 38);
+  } else {
+    ctx.fillStyle = INK;
+    ctx.fillText(levelName, W / 2, 38);
+  }
 
   const tags: string[] = [];
   if (effects.wide > 0) tags.push('WIDE');
@@ -407,10 +438,8 @@ export function drawHUD(
   if (effects.sticky > 0) tags.push('STICKY');
   ctx.font = '600 22px Fredoka, sans-serif';
   if (combo >= 2) {
-    ctx.fillStyle = RB.red.fill;
-    ctx.fillText('COMBO ×' + combo, W / 2, 74);
+    text('COMBO ×' + combo, W / 2, 74, RB.red.fill);
   } else if (tags.length) {
-    ctx.fillStyle = RB.teal.shade;
-    ctx.fillText(tags.join('  ·  '), W / 2, 74);
+    text(tags.join('  ·  '), W / 2, 74, night ? RB.teal.light : RB.teal.shade);
   }
 }

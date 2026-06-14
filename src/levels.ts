@@ -54,6 +54,7 @@ export const RB: Record<ColorName, ColorEntry> = {
 export const RB_ORDER: ColorName[] = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink'];
 
 export const INK = '#34215a';
+export const INK_DK = '#1d1336'; // darker shadow ink
 
 export function brickFromChar(ch: string, row: number): BrickDef | null {
   const fixed: Record<string, ColorName> = {

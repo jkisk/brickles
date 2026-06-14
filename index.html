@@ -15,9 +15,9 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet" />
 <style>
-  :root { --ink: #34215a; }
+  :root { --ink: #34215a; --ink-dk: #1d1336; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
@@ -44,12 +44,18 @@
     width: 64px; height: 64px; border-radius: 50%;
     border: 5px solid var(--ink);
     background: #fff; color: var(--ink);
-    font-size: 30px; line-height: 1; cursor: pointer;
+    line-height: 1; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 5px 0 rgba(52,33,90,0.35);
-    transition: transform .08s;
+    box-shadow: 0 5px 0 var(--ink);
+    transition: transform .08s, box-shadow .08s;
   }
-  .ctl:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(52,33,90,0.35); }
+  .ctl:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ink); }
+  .ctl svg { width: 30px; height: 30px; display: block; }
+  /* muted = inverted: dark now means "off", not a different button family */
+  .ctl.muted { background: var(--ink); color: #fff; box-shadow: 0 5px 0 var(--ink-dk); }
+  .ctl.muted:active { box-shadow: 0 2px 0 var(--ink-dk); }
+  #btn-mute .ic-off, #btn-mute.muted .ic-on { display: none; }
+  #btn-mute.muted .ic-off { display: block; }
   #btn-pause { right: 104px; }
   #btn-mute  { right: 30px; }
 
@@ -126,73 +132,90 @@
   .btn-row { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
   .btn-row .btn { padding: 18px 42px; font-size: 34px; }
 
-  /* ── Level select ── */
-  .card.levels { max-width: 980px; padding: 40px 44px 44px; }
-  .lvl-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .lvl-top h2 { font-size: 56px; margin: 0; }
-  .lvl-back {
-    width: 64px; height: 64px; border-radius: 50%;
-    border: 5px solid var(--ink); background: #fff; color: var(--ink);
-    font-size: 34px; font-weight: 700; cursor: pointer; font-family: inherit;
-    box-shadow: 0 5px 0 rgba(52,33,90,0.35);
+  /* ── Level select — full-screen map over a neutral pastel sky ── */
+  #overlay-levelselect { padding: 0; }
+  #overlay-levelselect::before {
+    background: linear-gradient(180deg, #bfe6ff 0%, #dff1ff 30%, #fdeffa 72%, #ffe7f4 100%);
+    backdrop-filter: none;
   }
-  .lvl-back:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(52,33,90,0.35); }
-  .lvl-progress {
-    font-weight: 700; font-size: 28px; color: var(--ink);
-    background: #fff0a3; border: 5px solid var(--ink);
-    border-radius: 999px; padding: 8px 22px;
-  }
-  .world-band { margin-top: 22px; text-align: left; }
-  .world-pill {
-    display: inline-flex; align-items: center; gap: 14px;
-    background: #fff; border: 5px solid var(--ink); border-radius: 999px;
-    padding: 6px 24px 6px 8px;
-  }
-  .world-num {
-    width: 46px; height: 46px; border-radius: 50%;
-    border: 4px solid var(--ink); color: #fff;
+  .lvlscreen { position: relative; z-index: 1; width: 100%; height: 100%; color: var(--ink); }
+  .scr-top { position: relative; height: 150px; display: flex; align-items: center; justify-content: center; }
+  .scr-back {
+    position: absolute; left: 46px; top: 46px; width: 74px; height: 74px; border-radius: 20px;
+    background: #fff; border: 6px solid var(--ink); color: var(--ink);
+    font-family: inherit; font-size: 38px; font-weight: 700; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 26px;
-  }
-  .world-name  { font-weight: 700; font-size: 28px; color: var(--ink); }
-  .world-count { font-weight: 600; font-size: 22px; color: #6a5a86; }
-  .tiles { position: relative; display: flex; gap: 16px; margin-top: 16px; }
-  .tiles::before {
-    content: ''; position: absolute; left: 4%; right: 4%; top: 76px;
-    border-top: 5px dashed rgba(52,33,90,0.25);
-  }
-  .slot { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .tile {
-    width: 100%; aspect-ratio: 1;
-    border: 6px solid var(--ink); border-radius: 28px;
-    font-family: inherit; font-weight: 700; color: var(--ink); cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    box-shadow: 0 7px 0 rgba(52,33,90,0.30);
+    box-shadow: 0 7px 0 var(--ink);
     transition: transform .08s, box-shadow .08s;
   }
-  .tile:not(.lock):active { transform: translateY(4px); box-shadow: 0 3px 0 rgba(52,33,90,0.30); }
-  .tile.done { background: #bdf3c8; }
-  .tile.cur  {
-    background: #ffd93b;
-    box-shadow: 0 0 0 9px rgba(255,159,67,0.45), 0 7px 0 rgba(52,33,90,0.30);
+  .scr-back:active { transform: translateY(4px); box-shadow: 0 3px 0 var(--ink); }
+  .scr-title { font-size: 52px; font-weight: 700; letter-spacing: .01em; text-shadow: 0 4px 0 #fff; }
+  .scr-prog {
+    position: absolute; right: 46px; top: 52px;
+    background: var(--ink); color: #fff; border-radius: 999px;
+    padding: 10px 22px; font-size: 26px; font-weight: 600;
+    box-shadow: 0 6px 0 var(--ink-dk);
   }
-  .tile.lock {
-    background: repeating-linear-gradient(45deg, #e7e0f0 0 14px, #ded4ec 14px 28px);
-    border-color: #9a8cb5; color: #9a8cb5; cursor: default;
-    box-shadow: 0 7px 0 rgba(110,95,140,0.25);
+  .band { padding: 6px 60px 0; position: relative; text-align: left; }
+  .band.dusk::before {
+    content: ''; position: absolute; inset: 8px 30px 18px; border-radius: 34px;
+    background: linear-gradient(180deg, rgba(91,75,158,.16), rgba(217,143,208,.16));
   }
-  .t-icon { font-size: 40px; line-height: 1; }
-  .t-icon.star { color: #ffb000; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; font-size: 48px; }
-  .t-num  { font-size: 38px; line-height: 1.1; }
-  .t-best { font-size: 22px; font-weight: 600; }
-  .t-play {
-    font-size: 19px; letter-spacing: 1px; color: #fff;
-    background: #ff9f43; border: 4px solid var(--ink);
-    border-radius: 999px; padding: 2px 14px; margin-top: 4px;
+  .band-head { position: relative; display: flex; align-items: center; gap: 18px; margin: 30px 0 26px; }
+  .band-pill {
+    display: inline-flex; align-items: center; gap: 14px;
+    background: #fff; border: 6px solid var(--ink); border-radius: 999px;
+    padding: 12px 26px 12px 14px; box-shadow: 0 8px 0 var(--ink);
   }
-  .tile-name { font-weight: 600; font-size: 21px; color: #5a4a78; }
-  .tile-name.dim { color: #9a8cb5; }
-  .lvl-hint { margin-top: 26px; font-weight: 500; font-size: 23px; color: #6a5a86; }
+  .band-pill .wno {
+    width: 54px; height: 54px; border-radius: 50%; border: 5px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 30px; font-weight: 700;
+  }
+  .band-pill .wtxt b { font-size: 32px; font-weight: 700; display: block; line-height: 1; white-space: nowrap; }
+  .band-pill .wtxt span { font-size: 19px; color: #6a5a8c; font-weight: 500; white-space: nowrap; }
+  .band-rule { flex: 1; height: 0; border-top: 6px dashed rgba(52,33,90,.28); }
+  .tiles { position: relative; display: flex; justify-content: space-between; padding: 0 6px 8px; }
+  .trail { position: absolute; left: 90px; right: 90px; top: 96px; height: 0; border-top: 7px dashed rgba(52,33,90,.30); z-index: 0; }
+  .tile { position: relative; z-index: 1; width: 168px; }
+  .tile .pad {
+    width: 168px; height: 168px; border-radius: 30px; border: 7px solid var(--ink);
+    box-shadow: 0 9px 0 var(--ink); position: relative; padding: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-family: inherit; color: var(--ink); cursor: pointer;
+    transition: transform .08s, box-shadow .08s;
+  }
+  .tile .num { font-size: 74px; font-weight: 700; line-height: .9; }
+  .tile .nm { font-size: 20px; font-weight: 600; color: var(--ink); text-align: center; margin-top: 10px; opacity: .92; }
+  .tile .badge {
+    position: absolute; top: -18px; right: -14px; width: 56px; height: 56px; border-radius: 50%;
+    border: 5px solid var(--ink); display: flex; align-items: center; justify-content: center;
+    font-size: 30px; box-shadow: 0 5px 0 var(--ink);
+  }
+  .tile.done .pad { background: linear-gradient(180deg, #fff, #eafff0); }
+  .tile.done .num { color: #2f9e4c; }
+  .tile.done .badge { background: #ffd93b; }
+  .tile.done .score { font-family: 'JetBrains Mono', monospace; font-size: 19px; font-weight: 700; color: #6a5a8c; margin-top: 4px; }
+  .tile.cur .pad {
+    background: linear-gradient(180deg, #fff7c2, #ffe06b);
+    box-shadow: 0 9px 0 var(--ink), 0 0 0 7px rgba(255,217,59,.45), 0 0 44px rgba(255,159,67,.6);
+  }
+  .tile.cur .num { color: #cf6f1e; }
+  .tile.cur .badge { background: #ff9f43; }
+  .tile.cur .play {
+    position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; font-size: 20px; font-weight: 600;
+    border-radius: 999px; padding: 7px 20px; box-shadow: 0 6px 0 var(--ink-dk); white-space: nowrap;
+  }
+  .tile.lock .pad {
+    background: repeating-linear-gradient(135deg, #e7e0f0, #e7e0f0 14px, #ded5ec 14px, #ded5ec 28px);
+    border-color: #9a8cb5; box-shadow: 0 9px 0 #9a8cb5; cursor: default;
+  }
+  .tile.lock .num { color: #b3a6cc; }
+  .tile.lock .badge { background: #cfc4e4; border-color: #9a8cb5; box-shadow: 0 5px 0 #9a8cb5; color: #6a5a8c; }
+  .tile.lock .nm { color: #b3a6cc; }
+  .tile:not(.lock) .pad:active { transform: translateY(5px); box-shadow: 0 4px 0 var(--ink); }
+  .scr-foot { text-align: center; font-size: 24px; color: #6a5a8c; font-weight: 600; margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -200,8 +223,13 @@
     <div id="stage">
       <canvas id="game"></canvas>
 
-      <button id="btn-pause" class="ctl" title="Pause (P)">⏸</button>
-      <button id="btn-mute"  class="ctl" title="Mute (M)">🔊</button>
+      <button id="btn-pause" class="ctl" title="Pause (P)">
+        <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/></svg>
+      </button>
+      <button id="btn-mute" class="ctl" title="Mute (M)">
+        <svg class="ic-on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor"/><path d="M16 9c1.2 1.2 1.2 4.8 0 6M18.5 7c2.2 2.2 2.2 7.8 0 10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        <svg class="ic-off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor"/><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      </button>
 
       <!-- TITLE -->
       <div id="overlay-title" class="overlay show">
@@ -227,14 +255,14 @@
 
       <!-- LEVEL SELECT -->
       <div id="overlay-levelselect" class="overlay">
-        <div class="card levels">
-          <div class="lvl-top">
-            <button id="btn-lvl-back" class="lvl-back" title="Back to title">‹</button>
-            <h2>Choose a Level</h2>
-            <span class="lvl-progress" id="lvl-progress">0 / 10 ★</span>
+        <div class="lvlscreen">
+          <div class="scr-top">
+            <button id="btn-lvl-back" class="scr-back" title="Back to title">‹</button>
+            <h2 class="scr-title">Choose a Level</h2>
+            <span class="scr-prog" id="lvl-progress">0 / 10 ★</span>
           </div>
           <div id="lvl-bands"></div>
-          <p class="lvl-hint">Tap a glowing tile to play · cleared levels can be replayed for a better score</p>
+          <p class="scr-foot">Tap a glowing tile to play · cleared levels can be replayed for a better score</p>
         </div>
       </div>
 

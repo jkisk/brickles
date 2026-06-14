@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brickles — Worlds &amp; Level Select Spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<template id="__bundler_thumbnail" data-bg-color="#34215a">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect x="360" y="250" width="150" height="150" rx="32" fill="#5fd97a" stroke="#34215a" stroke-width="20"/>
+    <rect x="525" y="250" width="150" height="150" rx="32" fill="#ffd93b" stroke="#34215a" stroke-width="20"/>
+    <rect x="690" y="250" width="150" height="150" rx="32" fill="#e7e0f0" stroke="#9a8cb5" stroke-width="20"/>
+    <circle x="0" cx="600" cy="560" r="40" fill="#ff7fc4" stroke="#34215a" stroke-width="20"/>
+  </svg>
+</template>
+<style>
+  :root{
+    /* ── ink + paper ─────────────────────────────── */
+    --ink:        #34215a;   /* the one outline colour, everywhere   */
+    --ink-soft:   #6a5a8c;   /* de-emphasised body text              */
+    --paper:      #fdf6ff;   /* page background (warm lilac white)    */
+    --card:       #ffffff;
+    --line:       #e7dcf2;
+
+    /* ── RB pastel palette (verbatim from levels.ts) ── */
+    --red:    #ff5d6c; --red-sh:    #c2364a; --red-lt:    #ffb3bb;
+    --orange: #ff9f43; --orange-sh: #cf6f1e; --orange-lt: #ffd39e;
+    --yellow: #ffd93b; --yellow-sh: #d4a700; --yellow-lt: #fff0a3;
+    --green:  #5fd97a; --green-sh:  #2f9e4c; --green-lt:  #bdf3c8;
+    --teal:   #3fd0d6; --teal-sh:   #1c9aa0; --teal-lt:   #a9eef0;
+    --blue:   #4db5ff; --blue-sh:   #1d7fcc; --blue-lt:   #b3dcff;
+    --purple: #a87cff; --purple-sh: #7148cc; --purple-lt: #dcc9ff;
+    --pink:   #ff7fc4; --pink-sh:   #cc4d93; --pink-lt:   #ffc4e4;
+
+    --radius: 22px;
+    --pageW: 940px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0;
+    font-family:'Nunito', system-ui, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 80% -8%, #ffe9f6 0%, rgba(255,233,246,0) 60%),
+      radial-gradient(1100px 620px at 0% 4%, #e6f3ff 0%, rgba(230,243,255,0) 55%),
+      var(--paper);
+    line-height:1.62;
+  }
+  .wrap{ max-width:var(--pageW); margin:0 auto; padding:0 28px 140px; }
+
+  /* ── headings / type ─────────────────────────────── */
+  h1,h2,h3,h4{ font-family:'Fredoka', sans-serif; font-weight:600; letter-spacing:-.01em; line-height:1.08; }
+  h2{ font-size:30px; margin:0 0 6px; }
+  h3{ font-size:21px; margin:30px 0 8px; }
+  h4{ font-size:15px; margin:22px 0 6px; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-soft); font-weight:600; }
+  p{ margin:0 0 14px; max-width:68ch; text-wrap:pretty; }
+  strong{ font-weight:800; }
+  a{ color:var(--purple-sh); }
+  code, .mono{ font-family:'JetBrains Mono', monospace; font-size:.86em; }
+  p code, li code{ background:#f1e9fb; border:1px solid var(--line); border-radius:6px; padding:1px 6px; color:var(--purple-sh); white-space:nowrap; }
+
+  /* ── hero ────────────────────────────────────────── */
+  header.hero{ padding:64px 0 30px; }
+  .kicker{
+    display:inline-flex; align-items:center; gap:9px;
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:13px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink); background:#fff;
+    border:3px solid var(--ink); border-radius:999px; padding:7px 16px;
+    box-shadow:0 4px 0 var(--ink);
+  }
+  .kicker .dot{ width:11px; height:11px; border-radius:50%; background:var(--pink); border:2.5px solid var(--ink); }
+  header.hero h1{ font-size:52px; font-weight:700; margin:24px 0 18px; letter-spacing:-.02em; line-height:1.12; }
+  header.hero h1 .tint{
+    background:linear-gradient(96deg,var(--pink-sh),var(--purple-sh) 55%,var(--blue-sh));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .lede{ font-size:19px; color:var(--ink-soft); max-width:60ch; }
+  .meta-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; }
+  .meta{
+    font-size:13px; font-weight:700; color:var(--ink-soft);
+    background:#fff; border:2px solid var(--line); border-radius:999px; padding:6px 14px;
+  }
+  .meta b{ color:var(--ink); }
+
+  /* ── section scaffold ────────────────────────────── */
+  section{ margin-top:54px; }
+  .sec-head{ display:flex; align-items:baseline; gap:14px; border-bottom:3px dashed var(--line); padding-bottom:14px; margin-bottom:24px; }
+  .sec-no{
+    font-family:'Fredoka',sans-serif; font-weight:700; font-size:15px;
+    color:#fff; background:var(--ink); border-radius:10px; padding:4px 11px; align-self:center;
+    box-shadow:0 3px 0 #1d1336;
+  }
+  .sec-head p{ margin:6px 0 0; }
+
+  /* ── generic card ────────────────────────────────── */
+  .card{
+    background:var(--card); border:3px solid var(--ink); border-radius:var(--radius);
+    box-shadow:0 6px 0 var(--ink); padding:24px 26px; margin:18px 0;
+  }
+  .card.flat{ box-shadow:0 6px 0 var(--line); border-color:var(--line); }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media(max-width:720px){ .grid2,.grid3{ grid-template-columns:1fr; } }
+
+  /* ── swatches ────────────────────────────────────── */
+  .swatches{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media(max-width:620px){ .swatches{ grid-template-columns:repeat(2,1fr); } }
+  .sw{
+    border:3px solid var(--ink); border-radius:16px; overflow:hidden; background:#fff;
+    box-shadow:0 4px 0 var(--ink);
+  }
+  .sw .chip{ height:62px; display:flex; align-items:flex-end; justify-content:flex-end; padding:7px; gap:5px; }
+  .sw .chip i{ width:16px; height:16px; border-radius:50%; border:2px solid rgba(52,33,90,.5); display:block; }
+  .sw .lab{ padding:8px 11px 9px; }
+  .sw .lab b{ font-family:'Fredoka',sans-serif; font-size:14px; display:block; }
+  .sw .lab .mono{ font-size:11px; color:var(--ink-soft); display:block; line-height:1.5; }
+
+  /* ── ink-spec demo bricks ────────────────────────── */
+  .brickrow{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+  .demo-brick{
+    width:118px; height:50px; border-radius:13px; border:5px solid var(--ink);
+    box-shadow:0 5px 0 var(--ink); position:relative;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fredoka',sans-serif; font-weight:600; color:var(--ink); font-size:13px;
+  }
+  .demo-brick::after{ /* top sheen */
+    content:""; position:absolute; left:8px; right:8px; top:6px; height:9px; border-radius:6px;
+    background:rgba(255,255,255,.55);
+  }
+  .demo-ball{ width:46px; height:46px; border-radius:50%; border:5px solid var(--ink); box-shadow:0 5px 0 var(--ink); background:radial-gradient(circle at 35% 32%, #fff, var(--pink) 70%); }
+  .demo-paddle{ width:160px; height:30px; border-radius:16px; border:5px solid var(--ink); box-shadow:0 5px 0 var(--ink); background:linear-gradient(var(--teal-lt),var(--teal)); }
+
+  /* ── world preview cards ─────────────────────────── */
+  .world-card{ border:3px solid var(--ink); border-radius:var(--radius); overflow:hidden; box-shadow:0 6px 0 var(--ink); background:#fff; }
+  .world-sky{ height:128px; position:relative; display:flex; align-items:flex-end; padding:14px; }
+  .world-sky .twk{ position:absolute; border-radius:50%; background:#fff; opacity:.9; }
+  .world-tag{
+    font-family:'Fredoka',sans-serif; font-weight:600; color:var(--ink); font-size:13px;
+    background:#fff; border:2.5px solid var(--ink); border-radius:999px; padding:4px 12px; position:relative; z-index:2;
+    box-shadow:0 3px 0 var(--ink);
+  }
+  .world-body{ padding:16px 18px 18px; }
+  .world-body h3{ margin:0 0 2px; }
+  .world-body .lv{ font-size:13px; color:var(--ink-soft); font-weight:700; }
+  .world-body ol{ margin:10px 0 0; padding-left:18px; font-size:13.5px; color:var(--ink-soft); }
+  .world-body ol b{ color:var(--ink); }
+  .grad-line{ display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
+  .grad-line .g{ font-family:'JetBrains Mono',monospace; font-size:11px; background:#f6f0ff; border:1px solid var(--line); border-radius:6px; padding:2px 7px; }
+
+  /* ── table ───────────────────────────────────────── */
+  table{ width:100%; border-collapse:separate; border-spacing:0; font-size:14px; margin:6px 0 2px; }
+  th,td{ text-align:left; padding:11px 14px; border-bottom:2px solid var(--line); vertical-align:top; }
+  th{ font-family:'Fredoka',sans-serif; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); }
+  tbody tr:last-child td{ border-bottom:none; }
+  td .pill{ font-size:11px; }
+  .wpill{ display:inline-block; font-family:'Fredoka',sans-serif; font-weight:600; font-size:11px; color:#fff; border-radius:999px; padding:2px 9px; }
+  .w1{ background:var(--blue-sh); } .w2{ background:var(--purple-sh); }
+
+  /* ── code block ──────────────────────────────────── */
+  pre{
+    background:#2a1c47; color:#efe7ff; border:3px solid var(--ink); border-radius:16px;
+    padding:18px 20px; overflow:auto; box-shadow:0 6px 0 var(--ink);
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.7; margin:14px 0;
+  }
+  pre .c{ color:#9d86c9; } pre .k{ color:#ff9fd0; } pre .s{ color:#a9eef0; } pre .n{ color:#ffd93b; } pre .f{ color:#8fd0ff; }
+  .note{ font-size:13px; color:var(--ink-soft); }
+
+  /* ── flow chips ──────────────────────────────────── */
+  .flow{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:8px 0 4px; }
+  .state{
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:13px; color:var(--ink);
+    background:#fff; border:3px solid var(--ink); border-radius:12px; padding:7px 13px; box-shadow:0 4px 0 var(--ink);
+  }
+  .state.new{ background:var(--yellow-lt); }
+  .arrow{ font-weight:800; color:var(--ink-soft); font-size:18px; }
+  .arrow small{ display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+
+  /* ── reco callout ────────────────────────────────── */
+  .reco{ display:flex; gap:14px; background:linear-gradient(180deg,#f3fff6,#e8fbef); border:3px solid var(--green-sh); border-radius:18px; padding:18px 20px; box-shadow:0 6px 0 var(--green-sh); }
+  .reco .ic{ font-size:26px; line-height:1; }
+  .reco h4{ margin:0 0 4px; color:var(--green-sh); }
+  .reco p{ margin:0; font-size:14px; color:#2f6e45; }
+
+  /* ════════════════════════════════════════════════════
+     MOCKUP — level select screen, 1080×1320 in-language
+     ════════════════════════════════════════════════════ */
+  .stage-wrap{ display:flex; justify-content:center; }
+  .device{
+    width:520px;                       /* 1080 scaled to 520 */
+    border:5px solid var(--ink); border-radius:38px; padding:14px; background:var(--ink);
+    box-shadow:0 14px 0 #1d1336, 0 30px 60px rgba(52,33,90,.32);
+  }
+  .scaler{ width:520px; height:635px; overflow:hidden; border-radius:26px; }
+  .screen{
+    width:1080px; height:1320px; transform:scale(.4815); transform-origin:top left;
+    position:relative; overflow:hidden; border-radius:54px;
+    font-family:'Fredoka',sans-serif; color:var(--ink);
+    /* level-select neutral pastel sky (proposed) */
+    background:linear-gradient(180deg,#bfe6ff 0%, #dff1ff 30%, #fdeffa 72%, #ffe7f4 100%);
+  }
+  .screen .sky-twk{ position:absolute; border-radius:50%; background:#fff; opacity:.85; }
+  .screen .cloud{ position:absolute; background:#fff; border-radius:60px; opacity:.9; box-shadow:0 0 0 6px rgba(255,255,255,.55); }
+
+  /* screen top bar */
+  .scr-top{ position:relative; height:150px; display:flex; align-items:center; justify-content:center; }
+  .scr-back{ position:absolute; left:46px; top:46px; width:74px; height:74px; border-radius:20px; background:#fff; border:6px solid var(--ink); box-shadow:0 7px 0 var(--ink); display:flex; align-items:center; justify-content:center; font-size:38px; font-weight:700; }
+  .scr-title{ font-size:52px; font-weight:700; letter-spacing:.01em; text-shadow:0 4px 0 #fff; }
+  .scr-prog{ position:absolute; right:46px; top:52px; background:var(--ink); color:#fff; border-radius:999px; padding:10px 22px; font-size:26px; font-weight:600; box-shadow:0 6px 0 #1d1336; }
+
+  /* world band */
+  .band{ padding:6px 60px 0; position:relative; }
+  .band-head{ display:flex; align-items:center; gap:18px; margin:30px 0 26px; }
+  .band-pill{ display:inline-flex; align-items:center; gap:14px; background:#fff; border:6px solid var(--ink); border-radius:999px; padding:12px 26px 12px 14px; box-shadow:0 8px 0 var(--ink); }
+  .band-pill .wno{ width:54px; height:54px; border-radius:50%; border:5px solid var(--ink); display:flex; align-items:center; justify-content:center; color:#fff; font-size:30px; font-weight:700; }
+  .band-pill .wtxt b{ font-size:32px; font-weight:700; display:block; line-height:1; white-space:nowrap; }
+  .band-pill .wtxt span{ font-size:19px; color:var(--ink-soft); font-weight:500; white-space:nowrap; }
+  .band-rule{ flex:1; height:0; border-top:6px dashed rgba(52,33,90,.28); }
+
+  /* tile row + connecting trail */
+  .tiles{ position:relative; display:flex; justify-content:space-between; padding:0 6px 8px; }
+  .trail{ position:absolute; left:90px; right:90px; top:96px; height:0; border-top:7px dashed rgba(52,33,90,.30); z-index:0; }
+
+  .tile{ position:relative; z-index:1; width:168px; }
+  .tile .pad{
+    width:168px; height:168px; border-radius:30px; border:7px solid var(--ink);
+    box-shadow:0 9px 0 var(--ink); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; position:relative;
+  }
+  .tile .num{ font-size:74px; font-weight:700; line-height:.9; }
+  .tile .nm{ font-size:20px; font-weight:600; color:var(--ink); text-align:center; margin-top:10px; opacity:.92; }
+  .tile .badge{ position:absolute; top:-18px; right:-14px; width:56px; height:56px; border-radius:50%; border:5px solid var(--ink); display:flex; align-items:center; justify-content:center; font-size:30px; box-shadow:0 5px 0 var(--ink); }
+
+  /* state: completed */
+  .tile.done .pad{ background:linear-gradient(180deg,#fff,#eafff0); }
+  .tile.done .num{ color:var(--green-sh); }
+  .tile.done .badge{ background:var(--yellow); }
+  .tile.done .score{ font-family:'JetBrains Mono',monospace; font-size:19px; font-weight:700; color:var(--ink-soft); margin-top:4px; }
+
+  /* state: current / unlocked-not-cleared */
+  .tile.cur .pad{ background:linear-gradient(180deg,#fff7c2,#ffe06b); box-shadow:0 9px 0 var(--ink), 0 0 0 7px rgba(255,217,59,.45), 0 0 44px rgba(255,159,67,.6); }
+  .tile.cur .num{ color:var(--orange-sh); }
+  .tile.cur .badge{ background:var(--orange); border-color:var(--ink); }
+  .tile.cur .play{ position:absolute; bottom:-22px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; font-size:20px; font-weight:600; border-radius:999px; padding:7px 20px; box-shadow:0 6px 0 #1d1336; white-space:nowrap; }
+
+  /* state: locked */
+  .tile.lock .pad{ background:repeating-linear-gradient(135deg,#e7e0f0,#e7e0f0 14px,#ded5ec 14px,#ded5ec 28px); border-color:#9a8cb5; box-shadow:0 9px 0 #9a8cb5; }
+  .tile.lock .num{ color:#b3a6cc; }
+  .tile.lock .badge{ background:#cfc4e4; border-color:#9a8cb5; box-shadow:0 5px 0 #9a8cb5; color:#6a5a8c; }
+  .tile.lock .nm{ color:#b3a6cc; }
+
+  /* world 2 band uses dusk tint behind */
+  .band.dusk{ }
+  .band.dusk::before{
+    content:""; position:absolute; inset:8px 30px 18px; border-radius:34px;
+    background:linear-gradient(180deg, rgba(91,75,158,.16), rgba(217,143,208,.16));
+    z-index:-1;
+  }
+
+  .scr-foot{ text-align:center; font-size:24px; color:var(--ink-soft); font-weight:600; margin-top:14px; }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:18px; margin-top:20px; }
+  .legend .it{ display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:700; }
+  .legend .sq{ width:34px; height:34px; border-radius:9px; border:3px solid var(--ink); box-shadow:0 3px 0 var(--ink); }
+  .legend .sq.d{ background:linear-gradient(180deg,#fff,#eafff0); }
+  .legend .sq.c{ background:linear-gradient(180deg,#fff7c2,#ffe06b); }
+  .legend .sq.l{ background:repeating-linear-gradient(135deg,#e7e0f0,#e7e0f0 7px,#ded5ec 7px,#ded5ec 14px); border-color:#9a8cb5; box-shadow:0 3px 0 #9a8cb5; }
+
+  .caption{ text-align:center; font-size:13px; color:var(--ink-soft); margin-top:16px; font-weight:700; }
+
+  footer.doc{ margin-top:70px; padding-top:24px; border-top:3px dashed var(--line); font-size:13px; color:var(--ink-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+
+  ul.tight{ margin:6px 0 14px; padding-left:20px; }
+  ul.tight li{ margin:4px 0; }
+
+  @media print{
+    body{ background:#fff; }
+    .card,.world-card,.sw,pre,.device{ box-shadow:none !important; }
+    section{ break-inside:avoid; }
+  }
+  @media(max-width:560px){
+    header.hero h1{ font-size:42px; }
+    .device,.scaler,.screen{ } /* device stays fixed-scale, horizontally scrollable */
+    .stage-wrap{ overflow-x:auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ════════ HERO ════════ -->
+  <header class="hero">
+    <span class="kicker"><span class="dot"></span>Brickles · Design Spec</span>
+    <h1>Worlds &amp; the <span class="tint">Level Select</span> screen</h1>
+    <p class="lede">A written proposal for two things: (1) formalising the <strong>soft-pastel + dark-ink-outline</strong> visual language and mapping it onto two worlds, and (2) a level-select screen with a real unlock + save system. Concrete hex throughout — the background is code, not art, so every value here is build-ready.</p>
+    <div class="meta-row">
+      <span class="meta"><b>Scope</b> · spec + mockup, not implementation</span>
+      <span class="meta"><b>Canvas</b> · 1080 × 1320 portrait</span>
+      <span class="meta"><b>Ink</b> · #34215a</span>
+      <span class="meta"><b>Levels</b> · 10 → 2 worlds</span>
+    </div>
+  </header>
+
+  <!-- ════════ 1 · VISUAL LANGUAGE ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-no">01</span>
+      <div>
+        <h2>The pastel-and-ink language</h2>
+        <p>Three rules make everything look like it belongs in the same sticker book.</p>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="card">
+        <h4>Rule 1 — One ink</h4>
+        <p style="font-size:14px;">Every shape is outlined in the <strong>same</strong> deep-grape ink — <code>#34215a</code>. Never black, never per-colour outlines. This single line weight + colour is what fuses the palette together.</p>
+      </div>
+      <div class="card">
+        <h4>Rule 2 — Pastel fill, three tones</h4>
+        <p style="font-size:14px;">Each hue ships as a trio: a <strong>fill</strong>, a darker <strong>shade</strong> (text / bottom edge), and a <strong>light</strong> (sheen / particles). Straight from <code>RB</code> in <span class="mono">levels.ts</span>.</p>
+      </div>
+      <div class="card">
+        <h4>Rule 3 — Chunky drop, no blur</h4>
+        <p style="font-size:14px;">The “sticker” depth is a <strong>hard offset shadow</strong> in ink (e.g. <code>0 6px 0 #34215a</code>) plus a top sheen — not a soft blur. Corners are generously rounded.</p>
+      </div>
+    </div>
+
+    <h3>The palette — exact values from <span class="mono">levels.ts</span></h3>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#ff5d6c"><i style="background:#c2364a"></i><i style="background:#ffb3bb"></i></div><div class="lab"><b>red</b><span class="mono">fill&nbsp;&nbsp;#ff5d6c<br>shade #c2364a<br>light #ffb3bb</span></div></div>
+      <div class="sw"><div class="chip" style="background:#ff9f43"><i style="background:#cf6f1e"></i><i style="background:#ffd39e"></i></div><div class="lab"><b>orange</b><span class="mono">fill&nbsp;&nbsp;#ff9f43<br>shade #cf6f1e<br>light #ffd39e</span></div></div>
+      <div class="sw"><div class="chip" style="background:#ffd93b"><i style="background:#d4a700"></i><i style="background:#fff0a3"></i></div><div class="lab"><b>yellow</b><span class="mono">fill&nbsp;&nbsp;#ffd93b<br>shade #d4a700<br>light #fff0a3</span></div></div>
+      <div class="sw"><div class="chip" style="background:#5fd97a"><i style="background:#2f9e4c"></i><i style="background:#bdf3c8"></i></div><div class="lab"><b>green</b><span class="mono">fill&nbsp;&nbsp;#5fd97a<br>shade #2f9e4c<br>light #bdf3c8</span></div></div>
+      <div class="sw"><div class="chip" style="background:#3fd0d6"><i style="background:#1c9aa0"></i><i style="background:#a9eef0"></i></div><div class="lab"><b>teal</b><span class="mono">fill&nbsp;&nbsp;#3fd0d6<br>shade #1c9aa0<br>light #a9eef0</span></div></div>
+      <div class="sw"><div class="chip" style="background:#4db5ff"><i style="background:#1d7fcc"></i><i style="background:#b3dcff"></i></div><div class="lab"><b>blue</b><span class="mono">fill&nbsp;&nbsp;#4db5ff<br>shade #1d7fcc<br>light #b3dcff</span></div></div>
+      <div class="sw"><div class="chip" style="background:#a87cff"><i style="background:#7148cc"></i><i style="background:#dcc9ff"></i></div><div class="lab"><b>purple</b><span class="mono">fill&nbsp;&nbsp;#a87cff<br>shade #7148cc<br>light #dcc9ff</span></div></div>
+      <div class="sw"><div class="chip" style="background:#ff7fc4"><i style="background:#cc4d93"></i><i style="background:#ffc4e4"></i></div><div class="lab"><b>pink</b><span class="mono">fill&nbsp;&nbsp;#ff7fc4<br>shade #cc4d93<br>light #ffc4e4</span></div></div>
+    </div>
+
+    <div class="grid2" style="margin-top:22px;">
+      <div class="card">
+        <h4>Outline spec</h4>
+        <table>
+          <tbody>
+            <tr><td><b>Ink colour</b></td><td class="mono">#34215a</td></tr>
+            <tr><td><b>Outline weight</b></td><td>bricks 5px · ball/paddle 5px · UI tiles 6–7px</td></tr>
+            <tr><td><b>Drop offset</b></td><td class="mono">0 (5–9)px 0 #34215a</td><td>hard, no blur</td></tr>
+            <tr><td><b>Corner radius</b></td><td>bricks 13px · tiles 28–30px · pills 999px</td></tr>
+            <tr><td><b>Sheen</b></td><td>top inset bar, <span class="mono">rgba(255,255,255,.55)</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h4>The language, applied</h4>
+        <div class="brickrow" style="margin-top:6px;">
+          <div class="demo-brick" style="background:#4db5ff;border-bottom-width:8px;">blue</div>
+          <div class="demo-brick" style="background:#5fd97a;border-bottom-width:8px;">green</div>
+          <div class="demo-brick" style="background:#ff7fc4;border-bottom-width:8px;">pink</div>
+        </div>
+        <div class="brickrow" style="margin-top:18px;">
+          <div class="demo-paddle"></div>
+          <div class="demo-ball"></div>
+          <span class="note">Same ink, same hard shadow, same rounding — paddle, ball and brick read as one set.</span>
+        </div>
+      </div>
+    </div>
+
+    <h4>Type</h4>
+    <p><strong>Fredoka</strong> (already in-engine) stays the display + UI face — rounded, friendly, legible at the small sizes a level grid needs. Body copy in this spec is <strong>Nunito</strong>, its softer companion. No third family.</p>
+  </section>
+
+  <!-- ════════ 2 · WORLDS ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-no">02</span>
+      <div>
+        <h2>Two worlds across ten levels</h2>
+        <p>The 10 levels already split cleanly by mood and difficulty — the “original six” relax into daylight, the “new four” push into candy-night. I propose <strong>5 + 5</strong>.</p>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- WORLD 1 -->
+      <div class="world-card">
+        <div class="world-sky" style="background:linear-gradient(180deg,#9ed8ff 0%,#c5ecff 50%,#eafff4 100%);">
+          <span class="twk" style="width:10px;height:10px;left:18%;top:24%"></span>
+          <span class="twk" style="width:7px;height:7px;left:62%;top:18%"></span>
+          <span class="twk" style="width:13px;height:13px;left:80%;top:40%"></span>
+          <span class="twk" style="width:8px;height:8px;left:40%;top:30%"></span>
+          <span class="world-tag">Levels 1–5 · daytime</span>
+        </div>
+        <div class="world-body">
+          <h3>World 1 — Meadow &amp; Sky</h3>
+          <div class="lv"><span class="wpill w1">WORLD 1</span> &nbsp;gentle ramp · soft blue daylight</div>
+          <ol>
+            <li><b>Rainbow Land</b> — the warm-up</li>
+            <li><b>Sprite Meadow</b> — first power-ups</li>
+            <li><b>Twin Hearts</b> — shape play</li>
+            <li><b>Color Castle</b> — first strong bricks</li>
+            <li><b>Sky Sprinkle</b> — tricky lanes</li>
+          </ol>
+          <div class="grad-line">
+            <span class="g">#9ed8ff</span><span class="g">#c5ecff</span><span class="g">#eafff4</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORLD 2 -->
+      <div class="world-card">
+        <div class="world-sky" style="background:linear-gradient(180deg,#4a3b8f 0%,#8a5fc0 48%,#d98fd0 100%);">
+          <span class="twk" style="width:11px;height:11px;left:14%;top:20%"></span>
+          <span class="twk" style="width:8px;height:8px;left:30%;top:46%"></span>
+          <span class="twk" style="width:13px;height:13px;left:55%;top:24%"></span>
+          <span class="twk" style="width:7px;height:7px;left:72%;top:52%"></span>
+          <span class="twk" style="width:10px;height:10px;left:86%;top:30%"></span>
+          <span class="world-tag">Levels 6–10 · candy-night</span>
+        </div>
+        <div class="world-body">
+          <h3>World 2 — Starlight &amp; Sugar</h3>
+          <div class="lv"><span class="wpill w2">WORLD 2</span> &nbsp;the hard stretch · dusk + more twinkles</div>
+          <ol>
+            <li><b>Star Burst</b> — the turn into night</li>
+            <li><b>Candy Stripe</b> — a colourful breather</li>
+            <li><b>Diamond Drop</b> — facets &amp; cores</li>
+            <li><b>Checkerboard</b> — no safe lanes</li>
+            <li><b>Final Flash</b> — the fortress finale</li>
+          </ol>
+          <div class="grad-line">
+            <span class="g">#4a3b8f</span><span class="g">#8a5fc0</span><span class="g">#d98fd0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" style="margin-top:14px;">Each world is just a <strong>sky gradient + twinkle density</strong> swap behind the existing brick field — cheap to add, and it gives the level-clear screen a “you crossed into night” beat between levels 5 and 6. The level-select screen below stays on a neutral pastel sky so both worlds sit comfortably together.</p>
+
+    <h3>Data-model change</h3>
+    <p>Two small additions to <span class="mono">levels.ts</span>. Add an explicit <code>world</code> field to <code>Level</code> (explicit beats deriving from index — it survives reordering and lets a world span any range later), plus a <code>WORLDS</code> metadata array that owns the per-world theme so <span class="mono">render.ts</span> can read sky stops without hard-coding them.</p>
+<pre><span class="c">// levels.ts — additions</span>
+<span class="k">export interface</span> Level {
+  name: <span class="k">string</span>;
+  grid: <span class="k">string</span>[];
+  world: <span class="k">number</span>;        <span class="c">// NEW · 1-based world id</span>
+}
+
+<span class="k">export interface</span> World {
+  id:   <span class="k">number</span>;
+  name: <span class="k">string</span>;        <span class="c">// "Meadow &amp; Sky"</span>
+  mood: <span class="k">string</span>;        <span class="c">// "daytime" | "candy-night" — label only</span>
+  sky:  [<span class="k">string</span>,<span class="k">string</span>,<span class="k">string</span>]; <span class="c">// gradient stops, top→bottom</span>
+  twinkles: <span class="k">number</span>;    <span class="c">// decor density override (26 today)</span>
+}
+
+<span class="k">export const</span> <span class="f">WORLDS</span>: World[] = [
+  { id:<span class="n">1</span>, name:<span class="s">'Meadow &amp; Sky'</span>,     mood:<span class="s">'daytime'</span>,
+    sky:[<span class="s">'#9ed8ff'</span>,<span class="s">'#c5ecff'</span>,<span class="s">'#eafff4'</span>], twinkles:<span class="n">18</span> },
+  { id:<span class="n">2</span>, name:<span class="s">'Starlight &amp; Sugar'</span>, mood:<span class="s">'candy-night'</span>,
+    sky:[<span class="s">'#4a3b8f'</span>,<span class="s">'#8a5fc0'</span>,<span class="s">'#d98fd0'</span>], twinkles:<span class="n">40</span> },
+];
+
+<span class="c">// each LEVELS entry gains:  world: 1  (×5)  then  world: 2  (×5)</span></pre>
+    <p class="note">Backwards-compatible: if <code>world</code> is ever missing, fall back to <code>Math.floor(idx / 5) + 1</code>. <span class="mono">drawBackground()</span> gains one argument — the active <code>World</code> — and reads <code>world.sky</code> / <code>world.twinkles</code> instead of today's constants.</p>
+  </section>
+
+  <!-- ════════ 3 · UNLOCK + SAVE ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-no">03</span>
+      <div>
+        <h2>Unlock rule &amp; where progress lives</h2>
+        <p>There's no save system yet — only <code>brickles_hi</code>. Here's the smallest one that makes a level-select meaningful.</p>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>The unlock rule</h4>
+        <ul class="tight">
+          <li><strong>Level 1 is always unlocked.</strong></li>
+          <li><strong>Beat level N → unlock level N+1.</strong> Linear; the existing <code>levelClear()</code> already fires at the exact right moment.</li>
+          <li><strong>Cleared levels stay cleared</strong> and are replayable — re-playing can only raise your best score, never re-lock anything.</li>
+          <li><strong>Worlds gate by their first level.</strong> World 2 “opens” simply because beating level 5 unlocks level 6 — no separate world lock needed.</li>
+        </ul>
+        <p class="note">A level is therefore in exactly one of three states, derived — not stored separately:</p>
+        <div class="legend" style="margin-top:10px;">
+          <div class="it"><span class="sq d"></span>Completed — <span class="mono">best[idx] exists</span></div>
+          <div class="it"><span class="sq c"></span>Unlocked — <span class="mono">idx ≤ maxUnlocked</span></div>
+          <div class="it"><span class="sq l"></span>Locked — <span class="mono">idx &gt; maxUnlocked</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>Where it persists — <span class="mono">localStorage</span></h4>
+        <p style="font-size:14px;">One new key, sitting beside the existing <code>brickles_hi</code>. Stores the furthest unlock and a per-level best so completed tiles can show a number.</p>
+<pre><span class="c">// key: "brickles_progress"</span>
+<span class="k">interface</span> Progress {
+  maxUnlocked: <span class="k">number</span>;            <span class="c">// 0-based, highest playable idx</span>
+  best: Record&lt;<span class="k">number</span>,<span class="k">number</span>&gt;;     <span class="c">// idx → best score</span>
+}
+
+<span class="c">// on levelClear(idx, score):</span>
+p.maxUnlocked = <span class="f">Math</span>.max(p.maxUnlocked, idx + <span class="n">1</span>);
+p.best[idx]   = <span class="f">Math</span>.max(p.best[idx] ?? <span class="n">0</span>, score);
+<span class="f">localStorage</span>.setItem(<span class="s">'brickles_progress'</span>, <span class="f">JSON</span>.stringify(p));</pre>
+        <p class="note">Default when absent: <span class="mono">{ maxUnlocked: 0, best: {} }</span> — only level 1 open. Capped at <code>LEVELS.length - 1</code>. No accounts, no server; clears with site data, same as the high score.</p>
+      </div>
+    </div>
+
+    <h3>How it fits the existing flow</h3>
+    <p>One new state — <code>'levelselect'</code> — joins the seven in <span class="mono">game.ts</span>. It's reachable from the screens that already exist, and every tile tap routes through the <code>buildLevel(idx)</code> you already have.</p>
+    <div class="card flat">
+      <div class="flow">
+        <span class="state">title</span>
+        <span class="arrow">→<small>Levels btn</small></span>
+        <span class="state new">levelselect</span>
+        <span class="arrow">→<small>tap tile</small></span>
+        <span class="state">serve</span>
+        <span class="arrow">→</span>
+        <span class="state">play</span>
+        <span class="arrow">→</span>
+        <span class="state">levelclear</span>
+        <span class="arrow">↘<small>Level Map</small></span>
+        <span class="state new">levelselect</span>
+      </div>
+      <p class="note" style="margin-top:12px;">Entry points: a <strong>“Choose Level”</strong> button on the <span class="mono">title</span> overlay (next to Start, which now means “continue at your furthest level”); a <strong>“Level Map”</strong> button on the <span class="mono">levelclear</span> overlay (beside Next) and on <span class="mono">gameover</span>. Selecting a tile calls <code>buildLevel(idx); state = 'serve'; hideAll();</code> — identical to <code>nextLevel()</code> but with a chosen index.</p>
+    </div>
+
+    <div class="reco" style="margin-top:18px;">
+      <span class="ic">✦</span>
+      <div>
+        <h4>Recommendation — build it as an HTML overlay, not a canvas state</h4>
+        <p>Pause, game-over and title are already <code>.overlay</code> divs toggled by <code>show()/hideAll()</code>. A level grid is fundamentally a <strong>set of buttons with state</strong> — making it a 12th <code>overlay-levelselect</code> div reuses that exact machinery, gets keyboard/tap focus and scrolling for free, and keeps the render loop untouched. A canvas-drawn grid would mean hand-rolling hit-testing, focus and scroll for zero visual gain. Match the existing pattern.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 4 · MOCKUP ════════ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-no">04</span>
+      <div>
+        <h2>The screen — level select mockup</h2>
+        <p>1080 × 1320, in-language. Two world bands, a dotted “map” trail, and the three tile states side by side. State shown: World 1 fully cleared, level 6 cleared, level 7 current, 8–10 locked.</p>
+      </div>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="device">
+        <div class="scaler">
+          <div class="screen">
+            <!-- decor -->
+            <div class="cloud" style="width:150px;height:46px;left:120px;top:230px;"></div>
+            <div class="cloud" style="width:110px;height:36px;left:760px;top:300px;"></div>
+            <div class="cloud" style="width:130px;height:40px;left:560px;top:880px;"></div>
+            <span class="sky-twk" style="width:14px;height:14px;left:80px;top:180px;"></span>
+            <span class="sky-twk" style="width:10px;height:10px;left:980px;top:210px;"></span>
+            <span class="sky-twk" style="width:12px;height:12px;left:430px;top:150px;"></span>
+            <span class="sky-twk" style="width:9px;height:9px;left:900px;top:560px;"></span>
+
+            <!-- top bar -->
+            <div class="scr-top">
+              <div class="scr-back">‹</div>
+              <div class="scr-title">Choose a Level</div>
+              <div class="scr-prog">6 / 10 ★</div>
+            </div>
+
+            <!-- ───── WORLD 1 ───── -->
+            <div class="band">
+              <div class="band-head">
+                <div class="band-pill">
+                  <span class="wno" style="background:#4db5ff;">1</span>
+                  <span class="wtxt"><b>Meadow &amp; Sky</b><span>World 1 · 5 / 5 cleared</span></span>
+                </div>
+                <div class="band-rule"></div>
+              </div>
+              <div class="tiles">
+                <div class="trail"></div>
+                <div class="tile done"><div class="pad"><span class="badge">★</span><span class="num">1</span><span class="score">12,400</span></div><div class="nm">Rainbow Land</div></div>
+                <div class="tile done"><div class="pad"><span class="badge">★</span><span class="num">2</span><span class="score">9,860</span></div><div class="nm">Sprite Meadow</div></div>
+                <div class="tile done"><div class="pad"><span class="badge">★</span><span class="num">3</span><span class="score">15,120</span></div><div class="nm">Twin Hearts</div></div>
+                <div class="tile done"><div class="pad"><span class="badge">★</span><span class="num">4</span><span class="score">11,030</span></div><div class="nm">Color Castle</div></div>
+                <div class="tile done"><div class="pad"><span class="badge">★</span><span class="num">5</span><span class="score">8,440</span></div><div class="nm">Sky Sprinkle</div></div>
+              </div>
+            </div>
+
+            <!-- ───── WORLD 2 ───── -->
+            <div class="band dusk">
+              <div class="band-head">
+                <div class="band-pill">
+                  <span class="wno" style="background:#a87cff;">2</span>
+                  <span class="wtxt"><b>Starlight &amp; Sugar</b><span>World 2 · 1 / 5 cleared</span></span>
+                </div>
+                <div class="band-rule"></div>
+              </div>
+              <div class="tiles">
+                <div class="trail"></div>
+                <div class="tile done"><div class="pad"><span class="badge">★</span><span class="num">6</span><span class="score">10,700</span></div><div class="nm">Star Burst</div></div>
+                <div class="tile cur"><div class="pad"><span class="badge">▶</span><span class="num">7</span><span class="play">PLAY</span></div><div class="nm">Candy Stripe</div></div>
+                <div class="tile lock"><div class="pad"><span class="badge">🔒</span><span class="num">8</span></div><div class="nm">Diamond Drop</div></div>
+                <div class="tile lock"><div class="pad"><span class="badge">🔒</span><span class="num">9</span></div><div class="nm">Checkerboard</div></div>
+                <div class="tile lock"><div class="pad"><span class="badge">🔒</span><span class="num">10</span></div><div class="nm">???</div></div>
+              </div>
+            </div>
+
+            <div class="scr-foot">Tap a glowing tile to play · cleared levels can be replayed for a better score</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">Mockup rendered at the game's true 1080×1320 and scaled to fit. Locked tile names hide once you're deep enough into a world (level 10 reads “???”) to keep a little mystery.</p>
+
+    <div class="grid3" style="margin-top:26px;">
+      <div class="card">
+        <h4>Completed tile</h4>
+        <p style="font-size:13.5px;">Full-colour, mint-tinted fill, gold <strong>★</strong> badge, best score in mono. Always tappable → replays the level.</p>
+      </div>
+      <div class="card">
+        <h4>Current / unlocked tile</h4>
+        <p style="font-size:13.5px;">The single furthest playable, not-yet-cleared level. Honey-yellow fill, <strong>orange glow ring</strong>, a ▶ badge and a “PLAY” pill — the obvious next tap.</p>
+      </div>
+      <div class="card">
+        <h4>Locked tile</h4>
+        <p style="font-size:13.5px;">Desaturated lilac hatch, grey ink, padlock badge, no score. Not focusable, ignores taps — but still shows its number so progress reads at a glance.</p>
+      </div>
+    </div>
+
+    <h3>Layout notes for build</h3>
+    <ul class="tight">
+      <li><strong>Bands</strong> — one per world, stacked. Header is a chunky pill (world number disc in the world's signature hue + name + “x / 5 cleared”) followed by a dashed rule.</li>
+      <li><strong>Tiles</strong> — 5 across, ~168px, joined by a dashed ink trail behind them for the board-game “map” read. On a phone the screen is portrait so two rows of five fit without scrolling; if more worlds arrive later, the overlay scrolls vertically.</li>
+      <li><strong>Top bar</strong> — back chevron (to title) left, “Choose a Level” centre, “6 / 10 ★” progress right.</li>
+      <li><strong>No new art</strong> — every pixel here is CSS/canvas primitives + the existing ink + RB palette + Fredoka. Nothing needs an illustrator.</li>
+    </ul>
+  </section>
+
+  <footer class="doc">
+    <span>Brickles · Worlds &amp; Level Select — design spec</span>
+    <span>Soft-pastel + dark-ink · #34215a · Fredoka</span>
+  </footer>
+
+</div>
+</body>
+</html>
