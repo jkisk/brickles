@@ -95,14 +95,17 @@ interface Progress {
   best: Record<number, number>; // level index → best score for that level
 }
 
+const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
 function loadProgress(): Progress {
   try {
     const p = JSON.parse(localStorage.getItem('brickles_progress') ?? '');
     if (typeof p?.maxUnlocked === 'number' && p.best && typeof p.best === 'object') {
-      return { maxUnlocked: Math.min(p.maxUnlocked, LEVELS.length - 1), best: p.best };
+      const maxUnlocked = IS_LOCAL ? LEVELS.length - 1 : Math.min(p.maxUnlocked, LEVELS.length - 1);
+      return { maxUnlocked, best: p.best };
     }
   } catch { /* fall through to fresh progress */ }
-  return { maxUnlocked: 0, best: {} };
+  return { maxUnlocked: IS_LOCAL ? LEVELS.length - 1 : 0, best: {} };
 }
 
 const progress: Progress = loadProgress();
@@ -625,7 +628,8 @@ document.getElementById('btn-start')! .addEventListener('click', startGame);
 document.getElementById('btn-next')!  .addEventListener('click', nextLevel);
 document.getElementById('btn-retry')! .addEventListener('click', () => startAt(levelIdx));
 document.getElementById('btn-again')! .addEventListener('click', () => startAt(0));
-document.getElementById('btn-resume')!.addEventListener('click', togglePause);
+document.getElementById('btn-resume')!   .addEventListener('click', togglePause);
+document.getElementById('btn-pause-map')! .addEventListener('click', openLevelSelect);
 document.getElementById('btn-pause')! .addEventListener('click', togglePause);
 document.getElementById('btn-mute')!  .addEventListener('click', toggleMute);
 document.getElementById('btn-levels')!  .addEventListener('click', openLevelSelect);
