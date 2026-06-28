@@ -77,6 +77,7 @@ let lives = 5;
 let combo = 0, comboTimer = 0, bestCombo = 0;
 let bricks: Brick[] = [], balls: Ball[] = [], powerups: PowerUp[] = [];
 let particles: Particle[] = [], floaters: Floater[] = [];
+let initialBrickCount = 0;
 let paddle: Paddle = { x: W / 2 - 110, y: H - 140, w: 220, h: 30, baseW: 220 };
 let effects: Effects = { wide: 0, slow: 0, sticky: 0 };
 let speedMul = 1, speedMulTarget = 1;
@@ -86,6 +87,21 @@ let mouseX = W / 2;
 
 function currentWorld() {
   return WORLDS[LEVELS[levelIdx].world - 1] ?? WORLDS[0];
+}
+
+function worldLevelIndex(): number {
+  const wid = LEVELS[levelIdx].world;
+  return LEVELS.slice(0, levelIdx).filter(l => l.world === wid).length;
+}
+
+function grayscaleAmount(): number {
+  if (state === 'title' || state === 'levelselect' || state === 'win') return 0;
+  if (currentWorld().id !== 3) return 0;
+  const posInWorld = worldLevelIndex();
+  const totalInWorld = LEVELS.filter(l => l.world === 3).length;
+  const bricksCleared = Math.max(0, initialBrickCount - bricks.length);
+  const brickFraction = initialBrickCount > 0 ? bricksCleared / initialBrickCount : 0;
+  return Math.max(0, (totalInWorld - posInWorld - brickFraction) / totalInWorld);
 }
 
 // ── Progress (unlocks + per-level bests) ──────────────────────────────
@@ -147,6 +163,7 @@ function buildLevel(i: number): void {
   effects = { wide: 0, slow: 0, sticky: 0 };
   speedMul = speedMulTarget = 1;
   powerups = []; particles = [];
+  initialBrickCount = bricks.length;
   resetBall();
 }
 
@@ -422,6 +439,9 @@ function startGame(): void {
 let t = 0;
 
 function render(): void {
+  const gray = grayscaleAmount();
+  canvas.style.filter = gray > 0 ? `grayscale(${(gray * 100).toFixed(1)}%)` : '';
+
   ctx.save();
   if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
   drawBackground(ctx, W, H, t, clouds, twinkles, currentWorld());
@@ -643,7 +663,7 @@ document.getElementById('btn-lvl-back')!.addEventListener('click', backToTitle);
 function updateTitle(): void {
   const n = clearedCount();
   (document.getElementById('title-hi') as HTMLElement).textContent =
-    n > 0 ? n + ' / ' + LEVELS.length + ' levels cleared ★' : 'Ten levels of colour to restore!';
+    n > 0 ? n + ' / ' + LEVELS.length + ' levels cleared ★' : LEVELS.length + ' levels of colour to restore!';
   (document.getElementById('btn-start') as HTMLElement).textContent =
     progress.maxUnlocked > 0 ? 'Continue ✦' : 'Play ✦';
 }

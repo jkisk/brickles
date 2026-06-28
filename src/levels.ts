@@ -38,6 +38,9 @@ export const WORLDS: World[] = [
   { id: 2, name: 'Starlight & Sugar', mood: 'candy-night',
     sky: ['#4a3b8f', '#8a5fc0', '#d98fd0'], night: true,
     cloudFill: 'rgba(199,182,238,0.85)', accent: '#a87cff', twinkles: 40 },
+  { id: 3, name: 'Chromatica', mood: 'greyscale-to-rainbow',
+    sky: ['#6A1B9A', '#E91E63', '#FFD600'], night: false,
+    cloudFill: 'rgba(255,200,150,0.88)', accent: '#E91E63', twinkles: 28 },
 ];
 
 export const RB: Record<ColorName, ColorEntry> = {
@@ -203,6 +206,69 @@ export const LEVELS: Level[] = [
       '2H22222222H2',
       '2222SSSS2222',
       '222222222222',
+    ],
+  },
+  // ── World 3: Chromatica — starts in greyscale, restores to full colour ──
+  {
+    name: 'Fog of Gray',
+    world: 3,
+    grid: [
+      '..#.#...#.#.',
+      '....##.##...',
+      '...######...',
+      '....##.##...',
+      '..#.#...#.#.',
+    ],
+  },
+  {
+    name: 'Shadow Steps',
+    world: 3,
+    grid: [
+      '##########..',
+      '..########..',
+      '....######..',
+      '......####..',
+      '........####',
+      '..........##',
+    ],
+  },
+  {
+    name: 'The Veil',
+    world: 3,
+    grid: [
+      'rr..oo..yy..',
+      '..gg..tt..bb',
+      'uu..pp..rr..',
+      '..oo..yy..gg',
+      'tt..bb..uu..',
+      '..pp..rr..oo',
+    ],
+  },
+  {
+    name: 'Chromastorm',
+    world: 3,
+    grid: [
+      '222222222222',
+      '2.r.y.g.b.u2',
+      '2H.2.2.2.2H2',
+      '2.S.S.S.S.S2',
+      '2H.2.2.2.2H2',
+      '2.r.y.g.b.u2',
+      '222222222222',
+    ],
+  },
+  {
+    name: 'Rainbow Reborn',
+    world: 3,
+    grid: [
+      'rrrrrrrrrrrr',
+      'SoooooooooSo',
+      'yyyyyyyyyyyy',
+      'gggggggggggg',
+      'tttHtttHtttt',
+      'bbbbbbbbbbbb',
+      'uuuuuuuuuuuu',
+      'pSpSpSpSpSpS',
     ],
   },
 ];
